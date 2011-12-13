@@ -98,4 +98,6 @@ public:
 //
 void RM_PrintError(RC rc);
 
+#define RM_INVALIDRID       (START_RM_ERR - 0) // RID invalid
+
 #endif
