@@ -26,6 +26,11 @@
 // RM_Record: RM Record interface
 //
 class RM_Record {
+    // Both need to be friend so that we can set the private fields
+    // directly in these classes
+    friend class RM_FileHandle;
+    firend class RM_FileScan;
+
 public:
     RM_Record ();
     ~RM_Record();
