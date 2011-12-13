@@ -36,6 +36,11 @@ public:
 
     // Return the RID associated with the record
     RC GetRid (RID &rid) const;
+
+private:
+    char *pData;
+    RID rid;
+    bool bIsValid;
 };
 
 //
@@ -97,6 +102,8 @@ public:
 // Print-error function
 //
 void RM_PrintError(RC rc);
+
+#define RM_INVALIDRECORD    (START_RM_WARN + 0) // record has not yet been read
 
 #define RM_INVALIDRID       (START_RM_ERR - 0) // RID invalid
 
