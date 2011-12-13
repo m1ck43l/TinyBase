@@ -1,3 +1,6 @@
+#ifndef RM_INTERNAL_H
+#define RM_INTERNAL_H
+
 typedef struct rm_fileheader {
     int recordSize;     // Size of a single record
     int numberRecords;  // Maximum number of records in a page
@@ -13,3 +16,5 @@ typedef struct rm_pageheader {
     char* bitmap;       // Pointer to the bitmap
                         // Size of the bitmap = [RM_FileHeader.numberRecords] bits
 } RM_PageHeader;
+
+#endif
