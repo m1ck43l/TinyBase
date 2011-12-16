@@ -67,6 +67,9 @@ public:
     // Forces a page (along with any contents stored in this class)
     // from the buffer pool to disk.  Default value forces all pages.
     RC ForcePages (PageNum pageNum = ALL_PAGES);
+private:
+    PF_FileHandle* pf_filehandle;
+    bool bFileOpen;
 };
 
 //
@@ -101,6 +104,10 @@ public:
     RC OpenFile   (const char *fileName, RM_FileHandle &fileHandle);
 
     RC CloseFile  (RM_FileHandle &fileHandle);
+private:
+    PF_Manager* pf_manager;
+    PF_FileHandle* pf_filehandle;
+    PF_PageHandle* pf_pagehandle;
 };
 
 //
