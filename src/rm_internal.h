@@ -12,7 +12,7 @@ typedef struct rm_fileheader {
 typedef struct rm_pageheader {
     int prevPage;       // Number of the previous page
     int nextPage;       // Number of the next page
-    int numberRecords   // Number of records in the page
+    int numberRecords;  // Number of records in the page
     char* bitmap;       // Pointer to the bitmap
                         // Size of the bitmap = [RM_FileHeader.numberRecords] bits
 } RM_PageHeader;
