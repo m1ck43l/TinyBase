@@ -52,6 +52,8 @@ private:
 // RM_FileHandle: RM File interface
 //
 class RM_FileHandle {
+  //RM_Manager a besoin de savoir si le fichier est déjà ouvert
+  friend class RM_Manager;
 public:
     RM_FileHandle ();
     ~RM_FileHandle();
@@ -68,7 +70,7 @@ public:
     // from the buffer pool to disk.  Default value forces all pages.
     RC ForcePages (PageNum pageNum = ALL_PAGES);
 private:
-    PF_FileHandle* pf_filehandle;
+    PF_FileHandle pf_filehandle;
     bool bFileOpen;
 };
 
@@ -105,9 +107,9 @@ public:
 
     RC CloseFile  (RM_FileHandle &fileHandle);
 private:
-    PF_Manager* pf_manager;
-    PF_FileHandle* pf_filehandle;
-    PF_PageHandle* pf_pagehandle;
+    PF_Manager pf_manager;
+    PF_FileHandle pf_filehandle;
+    PF_PageHandle pf_pagehandle;
 };
 
 //
@@ -116,7 +118,10 @@ private:
 void RM_PrintError(RC rc);
 
 #define RM_INVALIDRECORD    (START_RM_WARN + 0) // record has not yet been read
+#define RM_FILEOPEN         (START_RM_WARN + 1) // File is already open
+#define RM_FILECLOSED       (START_RM_WARN + 2) // File is already closed
 
 #define RM_INVALIDRID       (START_RM_ERR - 0) // RID invalid
+#define RM_RECORDTOOLONG    (START_RM_ERR - 1) // Record too long to fit in one page
 
 #endif
