@@ -3,10 +3,9 @@
 #include "rm_internal.h"
 #include <cstring>
 
-RM_Manager::RM_Manager(PF_Manager &pfm)
+RM_Manager::RM_Manager(PF_Manager &pfm) : pf_manager(pfm)
 {
-  //Initialisation des variables, pfm ayant déjà été instancié avant dans le programme
-  pf_manager = pfm;
+
 }
 
 RM_Manager::~RM_Manager()
@@ -159,9 +158,11 @@ RC RM_Manager::CloseFile(RM_FileHandle &fileHandle) {
 
   //On vérifie si le fichier n'est pas déjà fermé
   if (!fileHandle.bFileOpen) return RM_FILECLOSED;
+  
+  rc = fileHandle.pf_filehandle->ForcePages(ALL_PAGES);
+  if (rc) return rc;
 
   rc = pf_manager.CloseFile(*(fileHandle.pf_filehandle));
-
   if (rc) return rc;
   
   fileHandle.bFileOpen = FALSE;
