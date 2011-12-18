@@ -52,8 +52,9 @@ private:
 // RM_FileHandle: RM File interface
 //
 class RM_FileHandle {
-  //RM_Manager a besoin de savoir si le fichier est déjà ouvert
+  //RM_Manager et RM_FileScan ont besoin des attributs de RM_FileHandle
   friend class RM_Manager;
+  friend class RM_FileScan;
 public:
     RM_FileHandle ();
     ~RM_FileHandle();
@@ -91,6 +92,29 @@ public:
                   ClientHint pinHint = NO_HINT); // Initialize a file scan
     RC GetNextRec(RM_Record &rec);               // Get next matching record
     RC CloseScan ();                             // Close the scan
+private:
+    bool bOpen; //Savoir si le Scan ouvert
+    bool ConditionOK(char *pData); //Renvoie vrai si le record satisfait les conditions demandées
+
+    RM_FileHandle rm_filehandle;
+    RC GetNextRID(RID &rid);
+
+    //On crée une copie de tous les paramètres pour les utilise
+    void *val; //Contiendra la valeur que l'on devra comparer
+               //C'est un void* car on ne connait pas encore le type de value 
+    AttrType type;
+    int length;
+    int offset;
+    CompOp op;
+
+    //On ajoute des variables qui serviront à éviter trop de cast
+    int valInt;
+    float valFloat;
+    char *valString; //C'est un char* pour pouvoir utiliser strncmp
+
+    PageNum numCurPage; //Numéro de la page courante
+    int numCurSlot; //Numéro du slot sourant
+    int numMaxRec; //Nombre max de record par page
 };
 
 //
@@ -120,6 +144,9 @@ void RM_PrintError(RC rc);
 #define RM_INVALIDRECORD    (START_RM_WARN + 0) // record has not yet been read
 #define RM_FILEOPEN         (START_RM_WARN + 1) // File is already open
 #define RM_FILECLOSED       (START_RM_WARN + 2) // File is already closed
+#define RM_SCANOPEN         (START_RM_WARN + 3) // Scan is already open
+#define RM_SCANCLOSED       (START_RM_WARN + 4) // Scan is already closed
+#define RM_EOF              (START_RM_WARN + 5) // There is no more Record in file
 
 #define RM_INVALIDRID       (START_RM_ERR - 0) // RID invalid
 #define RM_RECORDTOOLONG    (START_RM_ERR - 1) // Record too long to fit in one page
