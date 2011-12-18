@@ -29,4 +29,12 @@ RC RID::GetSlotNum(SlotNum &slotNum) const {
     return RM_INVALIDRID;
 }
 
+void RID::SetPageNum(PageNum &pageNum) {
+    this->pageNum = pageNum;
+}
+
+void RID::SetSlotNum(SlotNum &slotNum) {
+    this->slotNum = slotNum;
+}
+
 RID::~RID() {}

@@ -35,6 +35,8 @@ public:
 
     RC GetPageNum(PageNum &pageNum) const;         // Return page number
     RC GetSlotNum(SlotNum &slotNum) const;         // Return slot number
+    void SetPageNum(PageNum &pageNum);
+    void SetSlotNum(PageNum &slotNum);
 
 private:
     bool bIsValid;
