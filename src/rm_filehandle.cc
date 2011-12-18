@@ -156,47 +156,43 @@ RC RM_FileHandle::DeleteRec  (const RID &rid) { // Delete a record
     PF_PageHandle pfph;
     char *pData;
 
-    // find pageNumber from rid
+    // récupère le numéro de page à partir de rid
     rc = rid.GetPageNum(pageNum);
     if (rc) {
         return rc;
     }
 
-    // find Slot Number from rid
+    // récupère le numéro de slot à partir de rid
     rc = rid.GetSlotNum(slotNum);
     if (rc) {
         return rc;
     }
 
-    // check if slot number is ok
-
-    // get the page from rid
+    // récupère la page à partir du numéro de page
     rc = pf_filehandle->GetThisPage(pageNum, pfph);
     if (rc) {
         return rc;
     }
 
-    // get data
+    // récupère les données de la page
     rc = pfph.GetData(pData);
     if (rc) {
         pf_filehandle->UnpinPage(pageNum);
         return rc;
     }
+    RM_PageHeader pageHeader(pData, rm_fileheader.numberRecords);
 
-    // test on rid
-
-    // clear Bitmap
-
-    // find a not empty slot
-
-
-    if (false) { // dispose page if empty
+    rc = pageHeader.getBitmap()->checkSlot(slotNum);
+    if (rc) {
         pf_filehandle->UnpinPage(pageNum);
+        return rc;
+    }
 
-        rc = pf_filehandle->DisposePage(pageNum);
-        if (rc) {
-            return rc;
-        }
+    pageHeader.getBitmap()->clearSlot(slotNum);
+    int numFreeSlots = CountFreeSlots(pageHeader);
+    if(numFreeSlots == 0) {
+        pageHeader.nextPage = rm_fileheader.nextFreePage;
+        rm_fileheader.nextFreePage = pageNum;
     }
 
     // mark as dirty
@@ -213,6 +209,31 @@ RC RM_FileHandle::DeleteRec  (const RID &rid) { // Delete a record
     }
 
     return 0;
+}
+
+int RM_FileHandle::CountFreeSlots(RM_PageHeader& pageHeader) {
+    int freeSlots = 0;
+    int value = 0;
+    for(int i = 0; i < pageHeader.getBitmap()->getSize(); i++) {
+        RC rc = pageHeader.getBitmap()->getSlot(i, value);
+        if(rc) continue;
+        freeSlots += (value == 1 ? 0 : 1);
+    }
+    return freeSlots;
+}
+
+RC RM_FileHandle::WritePageHeader(PF_PageHandle pf_ph, RM_PageHeader& pageHeader) {
+    char* pData;
+    RC rc = pf_ph.GetData(pData);
+    if(rc) return rc;
+
+    int nextPage = pageHeader.getNextPage();
+    int prevPage = pageHeader.getPrevPage();
+    memcpy(pData, &prevPage, sizeof(PageNum));
+    memcpy(pData+sizeof(PageNum), &nextPage, sizeof(PageNum));
+    memcpy(pData+2*sizeof(PageNum), pageHeader.getBitmap()->getChar(), pageHeader.getBitmap()->sizeToChar()*sizeof(char));
+
+    return OK_RC;
 }
 
 RC RM_FileHandle::UpdateRec  (const RM_Record &rec) { // Update a record

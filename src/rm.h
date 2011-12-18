@@ -76,6 +76,9 @@ private:
     PF_FileHandle *pf_filehandle;
     RM_FileHeader rm_fileheader;
     bool bFileOpen;
+
+    RC WritePageHeader(PF_PageHandle, RM_PageHeader& );
+    int CountFreeSlots(RM_PageHeader&);
 };
 
 //

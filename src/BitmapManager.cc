@@ -41,3 +41,21 @@ RC BitmapManager::checkSlot(SlotNum num) {
 int BitmapManager::sizeToChar() {
     return this->size/8 + ((this->size % 8) > 0 ? 1 : 0);
 }
+
+char* BitmapManager::getChar() {
+    return this->bitmap;
+}
+
+int BitmapManager::getSize() {
+    return size;
+}
+
+RC BitmapManager::getSlot(SlotNum num, int& value) {
+    if(num >= this->size) return RM_RECNOTFOUND;
+
+    int slotChar = num / 8;
+    int slotBit = num % 8;
+
+    value = this->bitmap[slotChar] & (1 << slotBit);
+    return OK_RC;
+}

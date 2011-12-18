@@ -13,6 +13,9 @@ class BitmapManager {
         void clearSlot(SlotNum);
         RC checkSlot(SlotNum);
         int sizeToChar();
+        char* getChar();
+        int getSize();
+        RC getSlot(SlotNum, int&);
 };
 
 typedef struct rm_fileheader {
@@ -24,6 +27,7 @@ typedef struct rm_fileheader {
 } RM_FileHeader;
 
 class RM_PageHeader {
+    friend class RM_FileHandle;
     private:
         int prevPage;       // Number of the previous page
         int nextPage;       // Number of the next page
