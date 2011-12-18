@@ -22,6 +22,8 @@
 #include "rm_rid.h"
 #include "pf.h"
 
+#include "rm_internal.h"
+
 //
 // RM_Record: RM Record interface
 //
@@ -72,6 +74,7 @@ public:
     RC ForcePages (PageNum pageNum = ALL_PAGES) const;
 private:
     PF_FileHandle *pf_filehandle;
+    RM_FileHeader rm_fileheader;
     bool bFileOpen;
 };
 

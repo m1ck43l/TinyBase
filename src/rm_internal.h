@@ -1,6 +1,19 @@
 #ifndef RM_INTERNAL_H
 #define RM_INTERNAL_H
 
+class BitmapManager {
+    private:
+        char* bitmap;
+        int size;
+        int sizeToChar();
+
+    public:
+        BitmapManager(char*,int);
+        ~BitmapManager();
+        void setSlot(SlotNum);
+        void clearSlot(SlotNum);
+};
+
 typedef struct rm_fileheader {
     int recordSize;     // Size of a single record
     int numberRecords;  // Maximum number of records in a page
