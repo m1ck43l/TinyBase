@@ -101,7 +101,7 @@ private:
 
     //On crée une copie de tous les paramètres pour les utilise
     void *val; //Contiendra la valeur que l'on devra comparer
-               //C'est un void* car on ne connait pas encore le type de value 
+               //C'est un void* car on ne connait pas encore le type de value
     AttrType type;
     int length;
     int offset;
@@ -142,13 +142,15 @@ private:
 void RM_PrintError(RC rc);
 
 #define RM_INVALIDRECORD    (START_RM_WARN + 0) // record has not yet been read
-#define RM_FILEOPEN         (START_RM_WARN + 1) // File is already open
+#define RM_FILEOPEN         (START_RM_WARN + 1) // File is already opened
 #define RM_FILECLOSED       (START_RM_WARN + 2) // File is already closed
-#define RM_SCANOPEN         (START_RM_WARN + 3) // Scan is already open
+#define RM_SCANOPEN         (START_RM_WARN + 3) // Scan is already opened
 #define RM_SCANCLOSED       (START_RM_WARN + 4) // Scan is already closed
 #define RM_EOF              (START_RM_WARN + 5) // There is no more Record in file
+#define RM_LASTWARN         RM_EOF
 
 #define RM_INVALIDRID       (START_RM_ERR - 0) // RID invalid
 #define RM_RECORDTOOLONG    (START_RM_ERR - 1) // Record too long to fit in one page
+#define RM_LASTERROR        RM_RECORDTOOLONG
 
 #endif
