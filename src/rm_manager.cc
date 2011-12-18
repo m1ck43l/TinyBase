@@ -28,12 +28,12 @@ RC RM_Manager::CreateFile(const char *fileName, int recordSize)
   if (rc) return rc;
   
   //On doit ouvrir le fichier pour écrire la page d'entête
-  pf_filehandle = *(new PF_FileHandle());
-  rc = pf_manager.OpenFile(fileName, pf_filehandle);
+  PF_FileHandle *pf_filehandle = new PF_FileHandle();
+  rc = pf_manager.OpenFile(fileName, *pf_filehandle);
   
   //On vérifie si l'ouverture s'est bien passée
   if (rc) {
-    delete &pf_filehandle; //On libère la mémoire qui n'aura finalement pas été utilisée
+    delete pf_filehandle; //On libère la mémoire qui n'aura finalement pas été utilisée
     return rc;
   }
   
@@ -54,47 +54,66 @@ RC RM_Manager::CreateFile(const char *fileName, int recordSize)
   rm_fileheader.numberPages = 1;
   
   //On doit maintenant insérer ce header dans la première page, on crée donc la première page
-  pf_pagehandle = *(new PF_PageHandle());
-  rc = pf_filehandle.AllocatePage(pf_pagehandle);
+  PF_PageHandle *pf_pagehandle = new PF_PageHandle();
+  rc = pf_filehandle->AllocatePage(*pf_pagehandle);
   
   //On vérifie qu'il n'y a pas eu d'erreur sinon on libère la mémoire
   if (rc) {
-    delete &pf_pagehandle;
-    delete &pf_filehandle;
+    delete pf_pagehandle;
+    delete pf_filehandle;
     return rc;
   }
   
   //On récupère l'adresse du début des données de la page
-  rc = pf_pagehandle.GetData(pData);
+  rc = pf_pagehandle->GetData(pData);
   if (rc) {
-    delete &pf_pagehandle;
-    delete &pf_filehandle;
+    delete pf_pagehandle;
+    delete pf_filehandle;
     return rc;
   }
   
   //On copie en mémoire le fileheader
-  memcpy(&pData[0], &rm_fileheader, sizeof(RM_PageHeader));
+  memcpy(&pData[0], &rm_fileheader, sizeof(RM_FileHeader));
   
-  //Quand on a fini d'écrire le header, on unpin la page
-  rc = pf_pagehandle.GetPageNum(pageNum);
+  //On marque la page comme dirty
+  rc = pf_pagehandle->GetPageNum(pageNum);
 
-  //On a plus besoin du pagehandle, on le libère
-  delete &pf_pagehandle;
+  //On n'a plus besoin du pagehandle
+  delete pf_pagehandle;
 
   if (rc) {
-    delete &pf_filehandle;
+    delete pf_filehandle;
     return rc;
   }
-  
-  rc = pf_filehandle.UnpinPage(pageNum);
 
-  //On peut libérer filehandle
-  delete &pf_filehandle;
+  rc = pf_filehandle->MarkDirty(pageNum);
+  if (rc) {
+    delete pf_filehandle;
+    return rc;
+  }
 
-  if (rc) return rc;
-  
-  //Il nous reste maintenant à fermer le fichier. Si cela ce passe bien ici (rc = 0) c'est que tout s'est bien passé avant
-  return pf_manager.CloseFile(pf_filehandle);
+  //On unpin la page
+  rc = pf_filehandle->UnpinPage(pageNum);
+  if (rc) {
+    delete pf_filehandle;
+    return rc;
+  }
+
+  //On force les pages
+  rc = pf_filehandle->ForcePages(ALL_PAGES);
+
+  if (rc){
+    delete pf_filehandle;
+    return rc;
+  }
+
+  //Il nous reste maintenant à fermer le fichier.
+  rc = pf_manager.CloseFile(*pf_filehandle);
+
+  //On libère filehandle
+  delete pf_filehandle;
+
+  return rc;
 }
 
 RC RM_Manager::DestroyFile(const char *fileName) {
@@ -111,11 +130,11 @@ RC RM_Manager::OpenFile(const char *fileName, RM_FileHandle &fileHandle) {
   //On vérifie si le fileHandle n'est pas déjà ouvert
   if (fileHandle.bFileOpen) return RM_FILEOPEN;
 
-  pf_filehandle = *(new PF_FileHandle());
+  PF_FileHandle *pf_filehandle = new PF_FileHandle();
 
-  rc = pf_manager.OpenFile(fileName, pf_filehandle);
+  rc = pf_manager.OpenFile(fileName, *pf_filehandle);
   if (rc) {
-    delete &pf_filehandle;
+    delete pf_filehandle;
     return rc;
   }
 
@@ -126,10 +145,10 @@ RC RM_Manager::OpenFile(const char *fileName, RM_FileHandle &fileHandle) {
   //Nouvelle instance sinon la variable pf_filehandle est détruite à la fin de 
   //l'exécution de la méthode, il ne faudra pas oublier de libérer le pf_filehandle
   //du RM_filehandle
-  fileHandle.pf_filehandle = *(new PF_FileHandle(pf_filehandle));
+  fileHandle.pf_filehandle = new PF_FileHandle(*pf_filehandle);
 
   //Tout s'est bien passé
-  delete &pf_filehandle;
+  delete pf_filehandle;
   return 0;
 
 }
@@ -141,18 +160,12 @@ RC RM_Manager::CloseFile(RM_FileHandle &fileHandle) {
   //On vérifie si le fichier n'est pas déjà fermé
   if (!fileHandle.bFileOpen) return RM_FILECLOSED;
 
-  //On force l'écriture des pages avant de fermer 
-  //(si on a oublier de le faire avant d'appeler cette méthode)
-
-  rc = fileHandle.pf_filehandle.ForcePages(ALL_PAGES);
-  if (rc) return rc;
-
-  rc = pf_manager.CloseFile(fileHandle.pf_filehandle);
+  rc = pf_manager.CloseFile(*(fileHandle.pf_filehandle));
 
   if (rc) return rc;
   
   fileHandle.bFileOpen = FALSE;
 
-  return rc;
+  return 0;
 
 }

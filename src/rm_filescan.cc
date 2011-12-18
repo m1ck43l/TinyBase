@@ -59,7 +59,7 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
   PF_PageHandle *pfph = new PF_PageHandle;
   RM_FileHeader rmfh;
   int rc;
-  rc = fileHandle.pf_filehandle.GetFirstPage(*pfph);
+  rc = fileHandle.pf_filehandle->GetFirstPage(*pfph);
   if (rc) return rc;
 
   //On récupère le nombre de record par page
@@ -71,7 +71,7 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
   numMaxRec = rmfh.numberRecords;
   numCurSlot = 0;
 
-  rc = fileHandle.pf_filehandle.GetNextPage(0, *pfph); //On obtient la 1ere page après le header
+  rc = fileHandle.pf_filehandle->GetNextPage(0, *pfph); //On obtient la 1ere page après le header
   if (rc == PF_EOF) numCurPage = -1; //On considère qu'il n'y a pas de page
   else if ((rc != 0) && (rc != PF_EOF)) return rc; //S'il y a d'autres erreurs
 
@@ -82,7 +82,7 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
   PageNum pageNum;
   rc = pfph->GetPageNum(pageNum);
   if (rc) return rc;
-  rc = fileHandle.pf_filehandle.UnpinPage(pageNum);
+  rc = fileHandle.pf_filehandle->UnpinPage(pageNum);
   if (rc) return rc;
   delete pfph;
 
@@ -290,7 +290,7 @@ RC RM_FileScan::GetNextRID(RID &rid)
   while (!trouve) {
     
     //On prend la page courante
-    rc = rm_filehandle.pf_filehandle.GetThisPage(numCurPage, *pfph);
+    rc = rm_filehandle.pf_filehandle->GetThisPage(numCurPage, *pfph);
     if (rc) return rc;
 
     rc = pfph->GetData(pData);
@@ -309,11 +309,11 @@ RC RM_FileScan::GetNextRID(RID &rid)
     
     if(!trouve) { //On est donc dans le cas numCurSlot = numMaxRec
       //On va sur la prochaine page
-      rc = rm_filehandle.pf_filehandle.GetNextPage(numCurPage, *pfph);
+      rc = rm_filehandle.pf_filehandle->GetNextPage(numCurPage, *pfph);
       if (rc == PF_EOF) return RM_EOF; //On a tout parcouru
       if (rc) return rc; //Si c'est une autre erreur
       
-      rc = rm_filehandle.pf_filehandle.UnpinPage(numCurPage);
+      rc = rm_filehandle.pf_filehandle->UnpinPage(numCurPage);
       if (rc) return rc;
       
       rc = pfph->GetPageNum(numCurPage);
@@ -322,7 +322,7 @@ RC RM_FileScan::GetNextRID(RID &rid)
     }
 
     //Il ne faut pas oublier d'unpin la page même si on a trouvé le rid
-    rc = rm_filehandle.pf_filehandle.UnpinPage(numCurPage);
+    rc = rm_filehandle.pf_filehandle->UnpinPage(numCurPage);
     if (rc) return rc;
     
   }
