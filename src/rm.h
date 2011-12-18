@@ -146,6 +146,7 @@ void RM_PrintError(RC rc);
 #define RM_SCANCLOSED       (START_RM_WARN + 4) // Scan is already closed
 #define RM_EOF              (START_RM_WARN + 5) // There is no more Record in file
 #define RM_LASTWARN         RM_EOF
+#define RM_ATTRTOLONG       (START_RM_WARN + 6) // Attribute too long
 
 #define RM_INVALIDRID       (START_RM_ERR - 0) // RID invalid
 #define RM_RECORDTOOLONG    (START_RM_ERR - 1) // Record too long to fit in one page
