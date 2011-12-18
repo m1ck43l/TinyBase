@@ -29,6 +29,15 @@ void BitmapManager::clearSlot(SlotNum num) {
     this->bitmap[slotChar] &= ~(1 << slotBit);
 }
 
+RC BitmapManager::checkSlot(SlotNum num) {
+    if(num >= this->size) return RM_RECNOTFOUND;
+
+    int slotChar = num / 8;
+    int slotBit = num % 8;
+
+    return (this->bitmap[slotChar] & (1 << slotBit) ? OK_RC : RM_RECNOTFOUND);
+}
+
 int BitmapManager::sizeToChar() {
     return this->size/8 + ((this->size % 8) > 0 ? 1 : 0);
 }

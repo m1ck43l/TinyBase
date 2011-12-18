@@ -41,11 +41,10 @@ RC RM_Manager::CreateFile(const char *fileName, int recordSize)
 
   rm_fileheader.recordSize = recordSize;
 
-  //On définit le nombre de record que l'on peut mettre dans la page, sans compter l'entête.
-  //Il faut d'abord vérifier que l'on peut mettre au moins un record dans une page
-  if ((unsigned int)recordSize > (PF_PAGE_SIZE - sizeof(RM_PageHeader))) return RM_RECORDTOOLONG;
+  int numberRecords = 8 * (PF_PAGE_SIZE - 2*sizeof(int) - sizeof(char)) / (8*recordSize + 1); // la taille du bitmap depend du nombre de records d'ou l'equation
+  if (numberRecords == 0) return RM_RECORDTOOLONG;
   else {
-    rm_fileheader.numberRecords = ((PF_PAGE_SIZE - sizeof(RM_PageHeader)) / recordSize);
+    rm_fileheader.numberRecords = numberRecords;
   }
 
   rm_fileheader.nextFreePage = -1; //Quand on ne pointe vers aucune page, on donne le numéro -1

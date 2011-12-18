@@ -45,17 +45,36 @@ RC RM_FileHandle::GetRec (const RID &rid, RM_Record &rec) const {
         pf_filehandle->UnpinPage(pageNum);
         return rc;
     }
+    RM_PageHeader pageHeader(pData, rm_fileheader.numberRecords);
+
+    rc = pageHeader.getBitmap()->checkSlot(slotNum);
+    if (rc) {
+        pf_filehandle->UnpinPage(pageNum);
+        return rc;
+    }
+
+    // on ajuste le pointeur
+    rc = pfph.GetData(pData);
+    if (rc) {
+        pf_filehandle->UnpinPage(pageNum);
+        return rc;
+    }
+    // header
+    pData += 2*sizeof(int);
+    pData += pageHeader.getBitmap()->sizeToChar()*sizeof(char);
+    // records
+    pData += slotNum * rm_fileheader.recordSize;
 
     // stocke les données dans rec
-    rec.GetData(pData);
+    rec.rid = rid;
+    memcpy(rec.pData, pData, rm_fileheader.recordSize);
+    rec.bIsValid = true;
 
-    // Unpine la page
+    // Unpin la page
     rc = pf_filehandle->UnpinPage(pageNum);
     if (rc) {
         return rc;
     }
-
-    // libère la mémoire
 
     return 0;
 }

@@ -10,7 +10,7 @@ RM_FileScan::RM_FileScan()
   val = NULL;
 }
 
-RM_FileScan::~RM_FileScan() 
+RM_FileScan::~RM_FileScan()
 {
   //Il n'y a pour l'instant rien à vérifier
 }
@@ -58,7 +58,6 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
 
   //On met le numéro de la première page à part le header
   PF_PageHandle *pfph = new PF_PageHandle;
-  RM_FileHeader rmfh;
   int rc;
   rc = fileHandle.pf_filehandle->GetFirstPage(*pfph);
   if (rc) {
@@ -89,7 +88,7 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
   if (rc){
     delete pfph;
     return rc;
-  }  
+  }
 
   //Nous n'avons plus besoin du pagehandle
   PageNum pageNum;
@@ -104,7 +103,7 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
   bOpen = true;
 
   return 0;
-  
+
 }
 
 RC RM_FileScan::GetNextRec(RM_Record &rec)
@@ -125,16 +124,16 @@ RC RM_FileScan::GetNextRec(RM_Record &rec)
     //Et on sort quand même de la boucle car rc vaudra RM_EOF
     rc = GetNextRID(rid);
     if (rc) return rc;
-    
+
     //On récupère le record associé
     rc = rm_filehandle.GetRec(rid, record);
     if (rc) return rc;
-    
+
     //Si le record correspond aux conditions, on le place dans rec
     char *pData;
     rc = record.GetData(pData);
     if (rc) return rc;
-    
+
     if (ConditionOK(pData)) {
       rec = record;
       trouve = true;
@@ -144,7 +143,7 @@ RC RM_FileScan::GetNextRec(RM_Record &rec)
   //Si on est sorti de la boucle, c'est qu'on a trouvé un record
 
   return 0;
-  
+
 }
 
 RC RM_FileScan::CloseScan()
@@ -153,7 +152,7 @@ RC RM_FileScan::CloseScan()
   //réinitialisées si on réouvre le scan
   //Ce n'est même pas une erreur de fermer un scan déjà fermé
   bOpen = false;
-  
+
   return 0;
 }
 
@@ -208,7 +207,7 @@ bool RM_FileScan::ConditionOK(char *pData)
     float f = pData[offset];
 
     switch (op) {
-      
+
     case EQ_OP : {
       if (f == valFloat) return true;
       break;
@@ -247,7 +246,7 @@ bool RM_FileScan::ConditionOK(char *pData)
     //On va utiliser strncmp en tenant compte de la longueur pour ne pas aller trop loin en mémoire
 
     switch (op) {
-      
+
     case EQ_OP : {
       if (strncmp(str, valString, length) == 0) return true;
       break;
@@ -290,7 +289,7 @@ RC RM_FileScan::GetNextRID(RID &rid)
 {
   //On va passer en revue tous les records présents dans le fichier
   int rc; //Résultat
-  
+
   if (numCurPage < 0) {//num vaut donc -1, il n'y a pas de page suivante
     return RM_EOF; //Il n'y a donc plus de rid
   }
@@ -298,11 +297,10 @@ RC RM_FileScan::GetNextRID(RID &rid)
 
   bool trouve = false;
   PF_PageHandle *pfph = new PF_PageHandle();
-  RM_PageHeader rmph;
   char *pData;
-  
+
   while (!trouve) {
-    
+
     //On prend la page courante
     rc = rm_filehandle.pf_filehandle->GetThisPage(numCurPage, *pfph);
     if (rc) {
@@ -316,17 +314,17 @@ RC RM_FileScan::GetNextRID(RID &rid)
       return rc;
     }
 
-    memcpy(&rmph, pData, sizeof(RM_PageHeader));
+    RM_PageHeader rmph(pData, rmfh.numberRecords);
 
     while((numCurSlot < numMaxRec) && (!trouve)) { //Tant que notre slot ne sors pas de la page
-      if(rmph.bitmap[numCurSlot] == 1) {//Le record existe donc bien
+      if(rmph.getBitmap()->checkSlot(numCurSlot) == OK_RC) {//Le record existe donc bien
 	rid.slotNum = numCurSlot;
 	rid.pageNum = numCurPage;
 	trouve = true;
       }
       numCurSlot++;
     }
-    
+
     if(!trouve) { //On est donc dans le cas numCurSlot = numMaxRec
       //On va sur la prochaine page
       rc = rm_filehandle.pf_filehandle->GetNextPage(numCurPage, *pfph);
@@ -334,7 +332,7 @@ RC RM_FileScan::GetNextRID(RID &rid)
 	delete pfph;
 	return RM_EOF; //On a tout parcouru
       }
-      
+
       if (rc) {
 	delete pfph;
 	return rc; //Si c'est une autre erreur
@@ -345,7 +343,7 @@ RC RM_FileScan::GetNextRID(RID &rid)
 	delete pfph;
 	return rc;
       }
-      
+
       rc = pfph->GetPageNum(numCurPage);
       if (rc) {
 	delete pfph;
