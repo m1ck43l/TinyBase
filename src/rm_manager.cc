@@ -168,7 +168,7 @@ RC RM_Manager::CloseFile(RM_FileHandle &fileHandle) {
   //On vérifie si le fichier n'est pas déjà fermé
   if (!fileHandle.bFileOpen) return RM_FILECLOSED;
 
-  rc = fileHandle.pf_filehandle->ForcePages(ALL_PAGES);
+  rc = fileHandle.ForcePages(ALL_PAGES);
   if (rc) return rc;
 
   rc = pf_manager.CloseFile(*(fileHandle.pf_filehandle));
