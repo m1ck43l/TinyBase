@@ -3,6 +3,7 @@
 #include "rm_internal.h"
 #include <cstdlib>
 #include <cstring>
+#include <cstdio>
 
 RM_FileScan::RM_FileScan()
 {
@@ -115,10 +116,10 @@ RC RM_FileScan::GetNextRec(RM_Record &rec)
   RM_Record record; //Contiendra le record courant
   int rc; //Résultat
   int trouve = false;
-
+  
   //Tant qu'on a pas trouvé de bon record, on continue
   while (!trouve) {
-
+    
     //On prend le prochain Rid disponible dans le fichier
     //Si on est à la fin du fichier il n'y aura pas de next record
     //Et on sort quand même de la boucle car rc vaudra RM_EOF
@@ -320,6 +321,7 @@ RC RM_FileScan::GetNextRID(RID &rid)
       if(rmph.getBitmap()->checkSlot(numCurSlot) == OK_RC) {//Le record existe donc bien
 	rid.slotNum = numCurSlot;
 	rid.pageNum = numCurPage;
+	rid.bIsValid = true;
 	trouve = true;
       }
       numCurSlot++;
