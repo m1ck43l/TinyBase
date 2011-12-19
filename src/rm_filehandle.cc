@@ -80,27 +80,26 @@ RC RM_FileHandle::GetRec (const RID &rid, RM_Record &rec) const {
 }
 
 RC RM_FileHandle::InsertRec  (const char *pData, RID &rid) { // Insert a new record
-  
+
   PF_PageHandle pf_pagehandle;
   RC rc;
   char *pData2; //Notre pointeur vers données
-  RID curRid; //RID courant
-  
+
   //On récupère le prochain Rid libre dans le fichier
-  rc = GetNextFreeRid(curRid);
+  rc = GetNextFreeRid(rid);
   if (rc) return rc;
 
   //On récupère le handle de la page correspondante au RID
-  rc = pf_filehandle->GetThisPage(curRid.pageNum, pf_pagehandle);
+  rc = pf_filehandle->GetThisPage(rid.pageNum, pf_pagehandle);
   if (rc) {
-    pf_filehandle->UnpinPage(curRid.pageNum);
+    pf_filehandle->UnpinPage(rid.pageNum);
     return rc;
   }
-  
+
   //On récupère le début des données de la page
   rc = pf_pagehandle.GetData(pData2);
-  if (rc){ 
-    pf_filehandle->UnpinPage(curRid.pageNum);
+  if (rc){
+    pf_filehandle->UnpinPage(rid.pageNum);
     return rc;
   }
 
@@ -110,28 +109,36 @@ RC RM_FileHandle::InsertRec  (const char *pData, RID &rid) { // Insert a new rec
   //On met d'abord pData au bon emplacement
   pData2 += 2*sizeof(int);
   pData2 += rmph.getBitmap()->sizeToChar()*sizeof(char);
-  pData2 += curRid.slotNum * rm_fileheader.recordSize;
+  pData2 += rid.slotNum * rm_fileheader.recordSize;
 
   memcpy(pData2, pData, rm_fileheader.recordSize);
 
   //Changement du bitmap pour marquer le rid comme occupé
-  rmph.getBitmap()->setSlot(curRid.slotNum);
+  rmph.getBitmap()->setSlot(rid.slotNum);
 
   //On marque la page comme dirty
-  rc = pf_filehandle->MarkDirty(curRid.pageNum);
+  rc = pf_filehandle->MarkDirty(rid.pageNum);
   if (rc) {
-    pf_filehandle->UnpinPage(curRid.pageNum);
+    pf_filehandle->UnpinPage(rid.pageNum);
     return rc;
   }
-  
-  //Si le slotnum était le dernier de la page on l'a donc remplie, 
+
+  //Si le slotnum était le dernier de la page on l'a donc remplie,
   //il faut la retirer de la liste des free pages
-  if(curRid.slotNum == (rm_fileheader.numberRecords -1)) {
+  int freeSlots = CountFreeSlots(rmph);
+  if(freeSlots == 0) {
     rm_fileheader.nextFreePage = rmph.getNextPage();
   }
 
+  // on reecrit les headers
+  rc = WritePageHeader(pf_pagehandle, rmph);
+  if(rc) {
+    pf_filehandle->UnpinPage(rid.pageNum);
+    return rc;
+  }
+
   //Il n'y a plus qu'à unpin la page
-  pf_filehandle->UnpinPage(curRid.pageNum);
+  pf_filehandle->UnpinPage(rid.pageNum);
 
   return 0;
 }
@@ -327,7 +334,7 @@ RC RM_FileHandle::GetNextFreeRid(RID &rid)
   if(rm_fileheader.nextFreePage != -1) {
 
     int i =0; //Sera l'indice de parcours des slots
-    
+
     //On récupère le handle de la page
     PF_PageHandle pf_pagehandle;
     rc = pf_filehandle->GetThisPage(rm_fileheader.nextFreePage, pf_pagehandle);
@@ -346,7 +353,7 @@ RC RM_FileHandle::GetNextFreeRid(RID &rid)
 
     //On récupère le pageheader pour accéder au bitmap
     RM_PageHeader rmph(pData, rm_fileheader.numberRecords);
-    
+
     //On parcours ensuite le bitmap jusqu'à trouver un rid de libre
 
     bool trouve = false;
@@ -371,7 +378,7 @@ RC RM_FileHandle::GetNextFreeRid(RID &rid)
 
   else { //Il n'y avait donc pas de page avec de la place dans le fichier
          //On va donc allouer une page
-    
+
     PF_PageHandle pf_pagehandle;
     rc = pf_filehandle->AllocatePage(pf_pagehandle);
     if (rc) return rc;
@@ -394,19 +401,22 @@ RC RM_FileHandle::GetNextFreeRid(RID &rid)
     //On crée le bon page header avec pas de page suivante et le header en précédent
     //Le bitmap est totalement vide
 
-    //On initialise d'abord à 0 toute la plage mémoire du header, 
+    //On initialise d'abord à 0 toute la plage mémoire du header,
     //On ne change ensuite que les num de pages
 
     //Je ne sais pas comment obtenir la longueur du bitmap pour l'instant
-    memset(pData, 0, 2*sizeof(int) + 0);
+    int bitmapSize = (rm_fileheader.numberRecords / 8 + ((rm_fileheader.numberRecords % 8) > 0 ? 1 : 0)) * sizeof(char);
+    memset(pData, 0, 2*sizeof(int) + bitmapSize);
 
     //La première page du fichier à le nombre 0 c'est donc déjà bon pour la page précédente
     //La page suivante vaut -1 car inexistante
-    memset(pData + sizeof(int), -1, sizeof(int));
+    int nextPage = -1;
+    memcpy(pData + sizeof(int), &nextPage, sizeof(int));
 
     //Il faut donc maintenant rendre le premier rid de cette page
     rid.pageNum = pageNum;
     rid.slotNum = 0;
+    rid.bIsValid = true;
 
     //On marque dirty la page et on unpin
     rc = pf_filehandle->MarkDirty(pageNum);

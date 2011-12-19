@@ -155,8 +155,8 @@ void RM_PrintError(RC rc);
 #define RM_EOF              (START_RM_WARN + 5) // There is no more Record in file
 #define RM_ATTRTOLONG       (START_RM_WARN + 6) // Attribute too long
 #define RM_RECNOTFOUND      (START_RM_WARN + 7) // Record not found
-#define RM_LASTWARN         RM_RECNOTFOUND
 #define RM_FILENOTFREE      (START_RM_WARN + 8) // File is not free
+#define RM_LASTWARN         RM_FILENOTFREE
 
 #define RM_INVALIDRID       (START_RM_ERR - 0) // RID invalid
 #define RM_RECORDTOOLONG    (START_RM_ERR - 1) // Record too long to fit in one page
