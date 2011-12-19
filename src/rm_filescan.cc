@@ -107,19 +107,18 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
 
 }
 
-RC RM_FileScan::GetNextRec(RM_Record &rec)
+RC RM_FileScan::GetNextRec(RM_Record &record)
 {
   //Si le scan n'est pas ouvert on ne peut pas prendre le prochain record
   if (!bOpen) return RM_SCANCLOSED;
 
   RID rid; //Contiendra le rid courant
-  RM_Record record; //Contiendra le record courant
   int rc; //Résultat
   int trouve = false;
-  
+
   //Tant qu'on a pas trouvé de bon record, on continue
   while (!trouve) {
-    
+
     //On prend le prochain Rid disponible dans le fichier
     //Si on est à la fin du fichier il n'y aura pas de next record
     //Et on sort quand même de la boucle car rc vaudra RM_EOF
@@ -136,7 +135,6 @@ RC RM_FileScan::GetNextRec(RM_Record &rec)
     if (rc) return rc;
 
     if (ConditionOK(pData)) {
-      rec = record;
       trouve = true;
     }
   }
