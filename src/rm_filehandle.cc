@@ -54,16 +54,7 @@ RC RM_FileHandle::GetRec (const RID &rid, RM_Record &rec) const {
     }
 
     // on ajuste le pointeur
-    rc = pfph.GetData(pData);
-    if (rc) {
-        pf_filehandle->UnpinPage(pageNum);
-        return rc;
-    }
-    // header
-    pData += 2*sizeof(int);
-    pData += pageHeader.getBitmap()->sizeToChar()*sizeof(char);
-    // records
-    pData += slotNum * rm_fileheader.recordSize;
+    rc = GetPointerToData(pfph, pageHeader, pData, slotNum);
 
     // stocke les données dans rec
     rec.rid = rid;
@@ -105,12 +96,13 @@ RC RM_FileHandle::InsertRec  (const char *pData, RID &rid) { // Insert a new rec
 
   RM_PageHeader rmph(pData2, rm_fileheader.numberRecords);
 
-  //Ecriture du record au bon emplacement
-  //On met d'abord pData au bon emplacement
-  pData2 += 2*sizeof(int);
-  pData2 += rmph.getBitmap()->sizeToChar()*sizeof(char);
-  pData2 += rid.slotNum * rm_fileheader.recordSize;
+  rc = GetPointerToData(pf_pagehandle, rmph, pData2, rid.slotNum);
+  if (rc){
+    pf_filehandle->UnpinPage(rid.pageNum);
+    return rc;
+  }
 
+  //Ecriture du record au bon emplacement
   memcpy(pData2, pData, rm_fileheader.recordSize);
 
   //Changement du bitmap pour marquer le rid comme occupé
@@ -288,16 +280,11 @@ RC RM_FileHandle::UpdateRec  (const RM_Record &rec) { // Update a record
     }
 
     // on ajuste le pointeur
-    rc = pfph.GetData(pData);
+    rc = GetPointerToData(pfph, pageHeader, pData, slotNum);
     if (rc) {
         pf_filehandle->UnpinPage(pageNum);
         return rc;
     }
-    // header
-    pData += 2*sizeof(int);
-    pData += pageHeader.getBitmap()->sizeToChar()*sizeof(char);
-    // records
-    pData += slotNum * rm_fileheader.recordSize;
 
     memcpy(pData, recData, rm_fileheader.recordSize);
 
@@ -428,4 +415,20 @@ RC RM_FileHandle::GetNextFreeRid(RID &rid)
     //Si on est arrivé ici c'est qu'il n'y a pas eu de problème
     return pf_filehandle->UnpinPage(pageNum);
   }
+}
+
+RC RM_FileHandle::GetPointerToData(PF_PageHandle& pf_ph, RM_PageHeader& pageHeader, char* &pData, SlotNum slotNum) const {
+    RC rc = pf_ph.GetData(pData);
+    if (rc) {
+        return rc;
+    }
+
+    // header
+    pData += 2*sizeof(int);
+    pData += pageHeader.getBitmap()->sizeToChar()*sizeof(char);
+
+    // records
+    pData += slotNum * rm_fileheader.recordSize;
+
+    return OK_RC;
 }

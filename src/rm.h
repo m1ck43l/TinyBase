@@ -80,6 +80,7 @@ private:
     RC WritePageHeader(PF_PageHandle, RM_PageHeader& );
     int CountFreeSlots(RM_PageHeader&);
     RC GetNextFreeRid(RID &rid);
+    RC GetPointerToData(PF_PageHandle&, RM_PageHeader&, char*&, SlotNum) const;
 };
 
 //
