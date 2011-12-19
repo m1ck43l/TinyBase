@@ -162,13 +162,27 @@ RC RM_Manager::OpenFile(const char *fileName, RM_FileHandle &fileHandle) {
 }
 
 RC RM_Manager::CloseFile(RM_FileHandle &fileHandle) {
-
   int rc; //Résultat
 
   //On vérifie si le fichier n'est pas déjà fermé
   if (!fileHandle.bFileOpen) return RM_FILECLOSED;
 
-  rc = fileHandle.ForcePages(ALL_PAGES);
+  PF_PageHandle pf_ph;
+  rc = fileHandle.pf_filehandle->GetThisPage(0, pf_ph);
+  if(rc) return rc;
+
+  char* pData;
+  rc = pf_ph.GetData(pData);
+  if(rc) return rc;
+  memcpy(pData, &(fileHandle.rm_fileheader), sizeof(RM_FileHeader));
+
+  rc = fileHandle.pf_filehandle->MarkDirty(0);
+  if (rc) return rc;
+
+  rc = fileHandle.pf_filehandle->UnpinPage(0);
+  if (rc) return rc;
+
+  rc = fileHandle.ForcePages();
   if (rc) return rc;
 
   rc = pf_manager.CloseFile(*(fileHandle.pf_filehandle));
@@ -177,5 +191,4 @@ RC RM_Manager::CloseFile(RM_FileHandle &fileHandle) {
   fileHandle.bFileOpen = FALSE;
 
   return 0;
-
 }
