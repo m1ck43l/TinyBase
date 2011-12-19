@@ -28,6 +28,7 @@ typedef int SlotNum;
 class RID {
   //RM_FileScan a besoin de pouvoir modifier le slot et la page d'un rid
   friend class RM_FileScan;
+  friend class RM_FileHandle;
 public:
     RID();                                         // Default constructor
     RID(PageNum pageNum, SlotNum slotNum);

@@ -80,73 +80,60 @@ RC RM_FileHandle::GetRec (const RID &rid, RM_Record &rec) const {
 }
 
 RC RM_FileHandle::InsertRec  (const char *pData, RID &rid) { // Insert a new record
-    RC rc;
-    PageNum pageNum;
-    SlotNum slotNum;
-    PF_PageHandle pfph;
-    // char *pData2;
+  
+  PF_PageHandle pf_pagehandle;
+  RC rc;
+  char *pData2; //Notre pointeur vers données
+  RID curRid; //RID courant
+  
+  //On récupère le prochain Rid libre dans le fichier
+  rc = GetNextFreeRid(curRid);
+  if (rc) return rc;
 
-    // check if record is ok
-    if (false) {
-        return rc;
-    }
+  //On récupère le handle de la page correspondante au RID
+  rc = pf_filehandle->GetThisPage(curRid.pageNum, pf_pagehandle);
+  if (rc) {
+    pf_filehandle->UnpinPage(curRid.pageNum);
+    return rc;
+  }
+  
+  //On récupère le début des données de la page
+  rc = pf_pagehandle.GetData(pData2);
+  if (rc){ 
+    pf_filehandle->UnpinPage(curRid.pageNum);
+    return rc;
+  }
 
-    // check if there's still place on the page, otherwise allocate new page
-    if (false) {
-        // get the first free page
-        rc = pf_filehandle->GetFirstPage(pfph);
-        if (rc) {
-            return rc;
-        }
-    }
-    else {
-        // allocate the new page
-        rc = pf_filehandle->AllocatePage(pfph);
-        if (rc) {
-            return rc;
-        }
-    }
+  RM_PageHeader rmph(pData2, rm_fileheader.numberRecords);
 
-    // get the page
-    rc = pf_filehandle->GetThisPage(pageNum, pfph);
-    if (rc) {
-        return rc;
-    }
+  //Ecriture du record au bon emplacement
+  //On met d'abord pData au bon emplacement
+  pData2 += 2*sizeof(int);
+  pData2 += rmph.getBitmap()->sizeToChar()*sizeof(char);
+  pData2 += curRid.slotNum * rm_fileheader.recordSize;
 
-    // get data
-    // rc = pfph.GetData(pData);
-    // if (rc) {
-    //     pf_filehandle.UnpinPage(pageNum);
-    //     return rc;
-    // }
+  memcpy(pData2, pData, rm_fileheader.recordSize);
 
-    // find the first empty slot
+  //Changement du bitmap pour marquer le rid comme occupé
+  rmph.getBitmap()->setSlot(curRid.slotNum);
 
+  //On marque la page comme dirty
+  rc = pf_filehandle->MarkDirty(curRid.pageNum);
+  if (rc) {
+    pf_filehandle->UnpinPage(curRid.pageNum);
+    return rc;
+  }
+  
+  //Si le slotnum était le dernier de la page on l'a donc remplie, 
+  //il faut la retirer de la liste des free pages
+  if(curRid.slotNum == (rm_fileheader.numberRecords -1)) {
+    rm_fileheader.nextFreePage = rmph.getNextPage();
+  }
 
-    // set rid
-    rid.SetPageNum(pageNum);
-    rid.SetSlotNum(slotNum);
+  //Il n'y a plus qu'à unpin la page
+  pf_filehandle->UnpinPage(curRid.pageNum);
 
-    // copy the record into the buffer
-
-    // set header
-
-    // check if page became full of not
-
-    // mark the header page as dirty
-    rc = pf_filehandle->MarkDirty(pageNum);
-    if (rc) {
-        pf_filehandle->UnpinPage(pageNum);
-        return rc;
-    }
-
-    // unpin the page
-    rc = pf_filehandle->UnpinPage(pageNum);
-    if (rc) {
-        return rc;
-    }
-
-    return 0;
+  return 0;
 }
 
 RC RM_FileHandle::DeleteRec  (const RID &rid) { // Delete a record
@@ -330,4 +317,105 @@ RC RM_FileHandle::ForcePages (PageNum pageNum) const {
     RC rc = pf_filehandle->ForcePages(pageNum);
     if (rc) return rc;
     return OK_RC;
+}
+
+RC RM_FileHandle::GetNextFreeRid(RID &rid)
+{
+  RC rc; //Résultat
+
+  //S'il y au moins une page avec de la place on cherche directement dessus
+  if(rm_fileheader.nextFreePage != -1) {
+
+    int i =0; //Sera l'indice de parcours des slots
+    
+    //On récupère le handle de la page
+    PF_PageHandle pf_pagehandle;
+    rc = pf_filehandle->GetThisPage(rm_fileheader.nextFreePage, pf_pagehandle);
+    if (rc) {
+      pf_filehandle->UnpinPage(rm_fileheader.nextFreePage);
+      return rc;
+    }
+
+    //On récupère les données de la page
+    char *pData;
+    rc = pf_pagehandle.GetData(pData);
+    if (rc) {
+      pf_filehandle->UnpinPage(rm_fileheader.nextFreePage);
+      return rc;
+    }
+
+    //On récupère le pageheader pour accéder au bitmap
+    RM_PageHeader rmph(pData, rm_fileheader.numberRecords);
+    
+    //On parcours ensuite le bitmap jusqu'à trouver un rid de libre
+
+    bool trouve = false;
+    while ((i<rm_fileheader.numberRecords) && !trouve){
+      if(rmph.getBitmap()->checkSlot(i) == RM_RECNOTFOUND) { //La place est donc libre on peut le prendre
+	rid.pageNum = rm_fileheader.nextFreePage;
+	rid.slotNum = i;
+	trouve = true;
+      }
+      i++;
+    }
+
+    if (!trouve) {//Si on a toujours pas trouvé et qu'on a parcouru toute la page c'est qu'elle n'était pas libre
+      pf_filehandle->UnpinPage(rm_fileheader.nextFreePage);
+      return RM_FILENOTFREE;
+    }
+
+    //Sinon on a trouvé, on peut unpin et renvoyer 0
+    pf_filehandle->UnpinPage(rm_fileheader.nextFreePage);
+    return 0;
+  }
+
+  else { //Il n'y avait donc pas de page avec de la place dans le fichier
+         //On va donc allouer une page
+    
+    PF_PageHandle pf_pagehandle;
+    rc = pf_filehandle->AllocatePage(pf_pagehandle);
+    if (rc) return rc;
+
+    PageNum pageNum;
+    rc = pf_pagehandle.GetPageNum(pageNum);
+    if (rc) return rc;
+
+    //On met à jour la liste des pages free dans le fileheader
+    rm_fileheader.nextFreePage = pageNum;
+
+    //On récupère les data
+    char *pData;
+    rc = pf_pagehandle.GetData(pData);
+    if (rc) {
+      pf_filehandle->UnpinPage(pageNum);
+      return rc;
+    }
+
+    //On crée le bon page header avec pas de page suivante et le header en précédent
+    //Le bitmap est totalement vide
+
+    //On initialise d'abord à 0 toute la plage mémoire du header, 
+    //On ne change ensuite que les num de pages
+
+    //Je ne sais pas comment obtenir la longueur du bitmap pour l'instant
+    memset(pData, 0, 2*sizeof(int) + 0);
+
+    //La première page du fichier à le nombre 0 c'est donc déjà bon pour la page précédente
+    //La page suivante vaut -1 car inexistante
+    memset(pData + sizeof(int), -1, sizeof(int));
+
+    //Il faut donc maintenant rendre le premier rid de cette page
+    rid.pageNum = pageNum;
+    rid.slotNum = 0;
+
+    //On marque dirty la page et on unpin
+    rc = pf_filehandle->MarkDirty(pageNum);
+    if (rc) {
+      pf_filehandle->UnpinPage(pageNum);
+      return rc;
+    }
+
+    //Si on est arrivé ici c'est qu'il n'y a pas eu de problème
+    return pf_filehandle->UnpinPage(pageNum);
+  }
 }
