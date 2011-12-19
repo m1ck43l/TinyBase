@@ -63,6 +63,7 @@ RM_Manager rmm(pfm);
 //
 RC Test1(void);
 RC Test2(void);
+RC Test3(void);
 
 void PrintError(RC rc);
 void LsFile(char *fileName);
@@ -83,11 +84,12 @@ RC GetNextRecScan(RM_FileScan &fs, RM_Record &rec);
 //
 // Array of pointers to the test functions
 //
-#define NUM_TESTS       2               // number of tests
+#define NUM_TESTS       3               // number of tests
 int (*tests[])() =                      // RC doesn't work on some compilers
 {
     Test1,
-    Test2
+    Test2,
+    Test3
 };
 
 //
@@ -147,7 +149,7 @@ int main(int argc, char *argv[])
 
     // Write ending message and exit
     cout << "Ending RM component test.\n\n";
-    
+
     return (0);
 }
 
@@ -442,7 +444,7 @@ RC UpdateRec(RM_FileHandle &fh, RM_Record &rec)
 //
 RC GetNextRecScan(RM_FileScan &fs, RM_Record &rec)
 {
-  return (fs.GetNextRec(rec));
+    return (fs.GetNextRec(rec));
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -480,14 +482,14 @@ RC Test2(void)
 {
     RC            rc;
     RM_FileHandle fh;
-    RM_FileScan fs;
+    RM_FileScan   fs;
 
     printf("test2 starting ****************\n");
 
     if ((rc = CreateFile(FILENAME, sizeof(TestRec))) ||
         (rc = OpenFile(FILENAME, fh)) ||
         (rc = AddRecs(fh, FEW_RECS)) ||
-	(rc = VerifyFile(fh, FEW_RECS)) ||
+        (rc = VerifyFile(fh, FEW_RECS)) ||
         (rc = CloseFile(FILENAME, fh)))
         return (rc);
 
@@ -497,5 +499,68 @@ RC Test2(void)
         return (rc);
 
     printf("\ntest2 done ********************\n");
+    return (0);
+}
+
+RC Test3(void)
+{
+    RC rc;
+    RM_FileHandle fh;
+    TestRec recBuf;
+    
+    printf("test3 starting ****************\n");
+    
+    // Il faut provoquer toutes les erreurs et vérifier si le RC est le RC attendu
+    
+    // liste des erreurs à tester
+    
+    // RM_INVALIDRECORD    (START_RM_WARN + 0) // record has not yet been read
+    // RM_FILEOPEN         (START_RM_WARN + 1) // File is already opened
+    // RM_FILECLOSED       (START_RM_WARN + 2) // File is already closed
+    // RM_SCANOPEN         (START_RM_WARN + 3) // Scan is already opened
+    // RM_SCANCLOSED       (START_RM_WARN + 4) // Scan is already closed
+    // RM_EOF              (START_RM_WARN + 5) // There is no more Record in file
+    // RM_ATTRTOLONG       (START_RM_WARN + 6) // Attribute too long
+    // RM_RECNOTFOUND      (START_RM_WARN + 7) // Record not found
+    // RM_FILENOTFREE      (START_RM_WARN + 8) // File is not free
+    // RM_LASTWARN         RM_FILENOTFREE
+
+    // RM_INVALIDRID       (START_RM_ERR - 0) // RID invalid
+    // RM_RECORDTOOLONG    (START_RM_ERR - 1) // Record too long to fit in one page
+    // RM_LASTERROR        RM_RECORDTOOLONG
+    
+    // RM_INVALIDRECORD
+      
+    // RM_FILEOPEN
+    OpenFile(FILENAME, fh);
+    rc = OpenFile(FILENAME, fh);
+    if (rc == RM_FILEOPEN) printf("OK\n"); else printf("FAIL %d", rc); // printError(rc);
+    CloseFile(FILENAME, fh);
+    
+    // RM_FILECLOSED
+    rc = CloseFile(FILENAME, fh);
+    if (rc == RM_FILECLOSED) printf("OK\n"); else printf("FAIL %d", rc); // printError(rc);
+    
+    // RM_SCANOPEN
+    
+    // RM_SCANCLOSED
+    
+    // RM_EOF
+    
+    // RM_ATTRTOLONG
+    
+    // RM_RECNOTFOUND
+    
+    // RM_FILENOTFREE
+    
+    // RM_LASTWARN
+    
+    // RM_INVALIDRID
+    
+    // RM_RECORDTOOLONG
+    rc = CreateFile(FILENAME, 500000);
+    if (rc == RM_RECORDTOOLONG) printf("OK\n"); else printf("FAIL %d", rc);
+    
+    printf("\ntest3 done ********************\n");
     return (0);
 }
