@@ -3,6 +3,7 @@
 #include "rm_internal.h"
 #include <cstring>
 #include <cstdio>
+#include <cstdlib>
 
 RM_FileHandle::RM_FileHandle () {
     bFileOpen = false;
@@ -20,7 +21,7 @@ RC RM_FileHandle::GetRec (const RID &rid, RM_Record &rec) const {
     SlotNum slotNum;
     PF_PageHandle pfph;
     char *pData;
-
+    
     // récupère le numéro de page à partir de rid
     rc = rid.GetPageNum(pageNum);
     if (rc) {
@@ -57,10 +58,16 @@ RC RM_FileHandle::GetRec (const RID &rid, RM_Record &rec) const {
     rc = GetPointerToData(pfph, pageHeader, pData, slotNum);
 
     // stocke les données dans rec
+    //Il faut d'abord allouer la mémoire pour les datas de rec 
+    rec.pData = (char *)malloc(rm_fileheader.recordSize);
+    rec.bIsValid = true; //Le record devient bon
     rec.rid = rid;
-    memcpy(rec.pData, pData, rm_fileheader.recordSize);
+    char * pData2;    
+    rc = rec.GetData(pData2);
+    if (rc) return rc;
+    memcpy(pData2, pData, rm_fileheader.recordSize);
     rec.bIsValid = true;
-
+    
     // Unpin la page
     rc = pf_filehandle->UnpinPage(pageNum);
     if (rc) {
@@ -349,6 +356,7 @@ RC RM_FileHandle::GetNextFreeRid(RID &rid)
       if(rmph.getBitmap()->checkSlot(i) == RM_RECNOTFOUND) { //La place est donc libre on peut le prendre
 	rid.pageNum = rm_fileheader.nextFreePage;
 	rid.slotNum = i;
+	rid.bIsValid = true; //Notre RID devient valide
 	trouve = true;
       }
       i++;

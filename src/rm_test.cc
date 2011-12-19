@@ -147,7 +147,7 @@ int main(int argc, char *argv[])
 
     // Write ending message and exit
     cout << "Ending RM component test.\n\n";
-
+    
     return (0);
 }
 
@@ -442,7 +442,7 @@ RC UpdateRec(RM_FileHandle &fh, RM_Record &rec)
 //
 RC GetNextRecScan(RM_FileScan &fs, RM_Record &rec)
 {
-    return (fs.GetNextRec(rec));
+  return (fs.GetNextRec(rec));
 }
 
 /////////////////////////////////////////////////////////////////////
@@ -480,12 +480,14 @@ RC Test2(void)
 {
     RC            rc;
     RM_FileHandle fh;
+    RM_FileScan fs;
 
     printf("test2 starting ****************\n");
 
     if ((rc = CreateFile(FILENAME, sizeof(TestRec))) ||
         (rc = OpenFile(FILENAME, fh)) ||
         (rc = AddRecs(fh, FEW_RECS)) ||
+	(rc = VerifyFile(fh, FEW_RECS)) ||
         (rc = CloseFile(FILENAME, fh)))
         return (rc);
 
