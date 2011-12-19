@@ -195,6 +195,13 @@ RC RM_FileHandle::DeleteRec  (const RID &rid) { // Delete a record
         rm_fileheader.nextFreePage = pageNum;
     }
 
+    // Rewrite page header
+    rc = WritePageHeader(pfph, pageHeader);
+    if(rc) {
+        pf_filehandle->UnpinPage(pageNum);
+        return rc;
+    }
+
     // mark as dirty
     rc = pf_filehandle->MarkDirty(pageNum);
     if (rc) {
@@ -238,59 +245,80 @@ RC RM_FileHandle::WritePageHeader(PF_PageHandle pf_ph, RM_PageHeader& pageHeader
 
 RC RM_FileHandle::UpdateRec  (const RM_Record &rec) { // Update a record
     RC rc;
-    RID rid;
-    PF_PageHandle pfph;
-    char *recData;
-    char *pData;
     PageNum pageNum;
     SlotNum slotNum;
+    PF_PageHandle pfph;
+    char *pData;
 
-    // get rid from record
+    RID rid;
     rc = rec.GetRid(rid);
-    if (rc) return rc;
+    if(rc) return rc;
 
-    // get data from record
-    rc = rec.GetData(recData);
-    if (rc) {
-        return rc;
-    }
-
-    // get pagenumber from rid
+    // récupère le numéro de page à partir de rid
     rc = rid.GetPageNum(pageNum);
     if (rc) {
         return rc;
     }
 
-    // get slot number
+    // récupère le numéro de slot à partir de rid
     rc = rid.GetSlotNum(slotNum);
     if (rc) {
         return rc;
     }
 
-    // check record is ok
-
-
-    // get page
+    // récupère la page à partir du numéro de page
     rc = pf_filehandle->GetThisPage(pageNum, pfph);
     if (rc) {
         return rc;
     }
 
-    // get data
+    // récupère les données de la page
     rc = pfph.GetData(pData);
-    if (rc) return rc;
+    if (rc) {
+        pf_filehandle->UnpinPage(pageNum);
+        return rc;
+    }
+    RM_PageHeader pageHeader(pData, rm_fileheader.numberRecords);
 
-    // check if rid exists
+    rc = pageHeader.getBitmap()->checkSlot(slotNum);
+    if (rc) {
+        pf_filehandle->UnpinPage(pageNum);
+        return rc;
+    }
 
-    // update !!
+    char* recData = NULL;
+    rc = rec.GetData(recData);
+    if (rc) {
+        pf_filehandle->UnpinPage(pageNum);
+        return rc;
+    }
 
-    // mark page as dirty
+    // on ajuste le pointeur
+    rc = pfph.GetData(pData);
+    if (rc) {
+        pf_filehandle->UnpinPage(pageNum);
+        return rc;
+    }
+    // header
+    pData += 2*sizeof(int);
+    pData += pageHeader.getBitmap()->sizeToChar()*sizeof(char);
+    // records
+    pData += slotNum * rm_fileheader.recordSize;
+
+    memcpy(pData, recData, rm_fileheader.recordSize);
+
+    // mark as dirty
+    rc = pf_filehandle->MarkDirty(pageNum);
+    if (rc) {
+        pf_filehandle->UnpinPage(pageNum);
+        return rc;
+    }
+
+    // unpin
     rc = pf_filehandle->UnpinPage(pageNum);
     if (rc) {
         return rc;
     }
-
-    // unpin the page
 
     return 0;
 }
@@ -298,32 +326,8 @@ RC RM_FileHandle::UpdateRec  (const RM_Record &rec) { // Update a record
 // Forces a page (along with any contents stored in this class)
 // from the buffer pool to disk.  Default value forces all pages.
 RC RM_FileHandle::ForcePages (PageNum pageNum) const {
-    RC rc;
-    PF_PageHandle pfph;
-    char *pData;
-
-    // get header page
-    rc = pf_filehandle->GetFirstPage(pfph);
-    if (rc) return rc;
-
-    // get data
-    rc = pfph.GetData(pData);
-    if (rc) return rc;
-
-    // set file header
-    if (false) return rc;
-
-    // mark header page as dirty
-    if (false) return rc;
-
-    // unpin header page
-
-
-
     // force page
-    rc = pf_filehandle->ForcePages(pageNum);
+    RC rc = pf_filehandle->ForcePages(pageNum);
     if (rc) return rc;
-
-    //
-    return 0;
+    return OK_RC;
 }
