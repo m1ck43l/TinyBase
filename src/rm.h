@@ -43,7 +43,7 @@ public:
 
     // Return the RID associated with the record
     RC GetRid (RID &rid) const;
-
+    RC Set(char*,int);
 private:
     char *pData;
     RID rid;

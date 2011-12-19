@@ -35,6 +35,7 @@ class RM_PageHeader {
 
     public:
         RM_PageHeader(char*, int);
+        ~RM_PageHeader();
         PageNum getNextPage();
         PageNum getPrevPage();
         BitmapManager* getBitmap();

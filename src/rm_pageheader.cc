@@ -7,6 +7,10 @@ RM_PageHeader::RM_PageHeader(char* pData, int size) {
         this->bitmap = new BitmapManager(pData + 2*sizeof(int), size);
 }
 
+RM_PageHeader::~RM_PageHeader() {
+    delete bitmap;
+}
+
 PageNum RM_PageHeader::getNextPage() {
     return this->nextPage;
 }

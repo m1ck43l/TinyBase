@@ -7,11 +7,12 @@
 
 RM_FileHandle::RM_FileHandle () {
     bFileOpen = false;
-    pf_filehandle = new PF_FileHandle();
+    pf_filehandle = NULL;//new PF_FileHandle();
 }
 
 RM_FileHandle::~RM_FileHandle() {
-    delete pf_filehandle;
+    if(pf_filehandle != NULL)
+        delete pf_filehandle;
 }
 
 // Given a RID, copy the record into rec
@@ -21,7 +22,7 @@ RC RM_FileHandle::GetRec (const RID &rid, RM_Record &rec) const {
     SlotNum slotNum;
     PF_PageHandle pfph;
     char *pData;
-    
+
     // récupère le numéro de page à partir de rid
     rc = rid.GetPageNum(pageNum);
     if (rc) {
@@ -58,16 +59,11 @@ RC RM_FileHandle::GetRec (const RID &rid, RM_Record &rec) const {
     rc = GetPointerToData(pfph, pageHeader, pData, slotNum);
 
     // stocke les données dans rec
-    //Il faut d'abord allouer la mémoire pour les datas de rec 
-    rec.pData = (char *)malloc(rm_fileheader.recordSize);
-    rec.bIsValid = true; //Le record devient bon
+    //Il faut d'abord allouer la mémoire pour les datas de rec
     rec.rid = rid;
-    char * pData2;    
-    rc = rec.GetData(pData2);
-    if (rc) return rc;
-    memcpy(pData2, pData, rm_fileheader.recordSize);
     rec.bIsValid = true;
-    
+    rec.Set(pData, rm_fileheader.recordSize);
+
     // Unpin la page
     rc = pf_filehandle->UnpinPage(pageNum);
     if (rc) {
