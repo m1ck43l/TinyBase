@@ -2,7 +2,7 @@
 #include "pf.h"
 #include "rm_internal.h"
 #include <cstring>
-
+#include <cstdio>
 
 RM_FileHandle::RM_FileHandle () {
     bFileOpen = false;
@@ -206,11 +206,12 @@ RC RM_FileHandle::DeleteRec  (const RID &rid) { // Delete a record
 
 int RM_FileHandle::CountFreeSlots(RM_PageHeader& pageHeader) {
     int freeSlots = 0;
-    int value = 0;
     for(int i = 0; i < pageHeader.getBitmap()->getSize(); i++) {
-        RC rc = pageHeader.getBitmap()->getSlot(i, value);
-        if(rc) continue;
-        freeSlots += (value == 1 ? 0 : 1);
+        RC rc = pageHeader.getBitmap()->checkSlot(i);
+        if(rc)
+            freeSlots++;
+        else
+            continue;
     }
     return freeSlots;
 }
