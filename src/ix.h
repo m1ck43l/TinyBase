@@ -14,9 +14,17 @@
 #include "pf.h"
 
 //
+// IX_FileHeader
+//
+typedef struct ix_fileheader {
+} IX_FileHeader;
+
+//
 // IX_IndexHandle: IX Index File interface
 //
 class IX_IndexHandle {
+    friend class IX_Manager;
+
 public:
     IX_IndexHandle();
     ~IX_IndexHandle();
@@ -29,6 +37,11 @@ public:
 
     // Force index files to disk
     RC ForcePages();
+
+private:
+    bool bFileOpen;
+    PF_FileHandle* pf_filehandle;
+    IX_FileHeader ix_fileheader;
 };
 
 //
@@ -85,4 +98,11 @@ private:
 //
 void IX_PrintError(RC rc);
 
+#define IX_FILEOPEN             (START_IX_WARN + 0) // File already opened
+#define IX_FILECLOSED           (START_IX_WARN + 1) // File already closed
+#define IX_EOF                  (START_IX_WARN + 2) // End of file
+#define IX_LASTWARN             IX_EOF
+
+#define IX_IDXCREATEFAIL        (START_IX_ERR - 0) // Fail to create index file
+#define IX_LASTERROR            IX_IDXCREATEFAIL
 #endif
