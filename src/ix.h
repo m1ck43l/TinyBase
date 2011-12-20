@@ -74,6 +74,10 @@ public:
 
     // Close an Index
     RC CloseIndex(IX_IndexHandle &indexHandle);
+private:
+    PF_Manager& pf_manager;
+
+    RC ComputeFilename(const char*, int, const char*&);
 };
 
 //
