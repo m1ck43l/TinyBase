@@ -48,9 +48,9 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
         break;
       }
       case STRING : {
-	if (length > MAXSTRINGLEN) return RM_ATTRTOLONG;
-        valString = (char*)malloc(length);
-	memcpy(valString, value, length);
+    	if (length > MAXSTRINGLEN) return RM_ATTRTOLONG;
+            valString = (char*)malloc(length);
+        memcpy(valString, value, length);
         break;
       }
     }
@@ -162,32 +162,33 @@ bool RM_FileScan::ConditionOK(char *pData)
 
   case INT : {
     //On prend la valeur du record
-    int i = pData[offset];
+    char* i = pData + offset;
     //Et on switch selon l'opération voulue
+
     switch (op) {
 
     case EQ_OP : {
-      if (i == valInt) return true;
+      if (*((int*)i) == valInt) return true;
       break;
     }
     case LT_OP : {
-      if (i < valInt) return true;
+      if (*((int*)i) < valInt) return true;
       break;
     }
     case GT_OP : {
-      if (i > valInt) return true;
+      if (*((int*)i) > valInt) return true;
       break;
     }
     case LE_OP : {
-      if (i <= valInt) return true;
+      if (*((int*)i) <= valInt) return true;
       break;
     }
     case GE_OP : {
-      if (i >= valInt) return true;
+      if (*((int*)i) >= valInt) return true;
       break;
     }
     case NE_OP : {
-      if (i != valInt) return true;
+      if (*((int*)i) != valInt) return true;
       break;
     }
     case NO_OP : {
@@ -196,36 +197,38 @@ bool RM_FileScan::ConditionOK(char *pData)
     }
 
     }//Fin du switch(op) sur INT
+
+    break;
   }//Fin du case INT
 
   case FLOAT : {
     //On récupère la valeur du record
-    float f = pData[offset];
+    char* f = pData + offset;
 
     switch (op) {
 
     case EQ_OP : {
-      if (f == valFloat) return true;
+      if (*((float*)f) == valFloat) return true;
       break;
     }
     case LT_OP : {
-      if (f < valFloat) return true;
+      if (*((float*)f) < valFloat) return true;
       break;
     }
     case GT_OP : {
-      if (f > valFloat) return true;
+      if (*((float*)f) > valFloat) return true;
       break;
     }
     case LE_OP : {
-      if (f <= valFloat) return true;
+      if (*((float*)f) <= valFloat) return true;
       break;
     }
     case GE_OP : {
-      if (f >= valFloat) return true;
+      if (*((float*)f) >= valFloat) return true;
       break;
     }
     case NE_OP : {
-      if (f != valFloat) return true;
+      if (*((float*)f) != valFloat) return true;
       break;
     }
     case NO_OP : {
@@ -234,6 +237,8 @@ bool RM_FileScan::ConditionOK(char *pData)
     }
 
     }//Fin du switch(op) sur FLOAT
+
+    break;
   }//Fin du case FLOAT
 
   case STRING : {
@@ -273,6 +278,7 @@ bool RM_FileScan::ConditionOK(char *pData)
     }
 
     }//Fin du switch(op) sur STRING
+    break;
   }//Fin du case STRING
 
   }//Fin du switch(type)

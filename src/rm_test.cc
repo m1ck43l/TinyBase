@@ -66,6 +66,7 @@ RC Test2(void);
 RC Test3(void);
 RC Test4(void);
 RC Test5(void);
+RC Test6(void);
 
 void PrintError(RC rc);
 void LsFile(char *fileName);
@@ -84,17 +85,19 @@ RC InsertRec(RM_FileHandle &fh, char *record, RID &rid);
 RC UpdateRec(RM_FileHandle &fh, RM_Record &rec);
 RC DeleteRec(RM_FileHandle &fh, RID &rid);
 RC GetNextRecScan(RM_FileScan &fs, RM_Record &rec);
+RC CompareRecs(RM_FileHandle &fh, int numRecs);
 
 //
 // Array of pointers to the test functions
 //
-#define NUM_TESTS       4               // number of tests
+#define NUM_TESTS       5               // number of tests
 int (*tests[])() =                      // RC doesn't work on some compilers
 {
     Test1,
     Test2,
     Test4,
-    Test5
+    Test5,
+    Test6
 };
 
 //
@@ -731,4 +734,77 @@ RC Test5(void)
 
     printf("\ntest5 done ********************\n");
     return (0);
+}
+
+RC Test6(void) {
+    RC            rc;
+    RM_FileHandle fh;
+    RM_FileScan   fs;
+
+    printf("test6 starting ****************\n");
+
+    if ((rc = CreateFile(FILENAME, sizeof(TestRec))) ||
+        (rc = OpenFile(FILENAME, fh)) ||
+        (rc = AddRecs(fh, FEW_RECS)) ||
+        (rc = CompareRecs(fh, FEW_RECS)) ||
+        (rc = CloseFile(FILENAME, fh)))
+        return (rc);
+
+    LsFile(FILENAME);
+
+    if ((rc = DestroyFile(FILENAME)))
+        return (rc);
+
+    printf("\ntest6 done ********************\n");
+    return (0);
+}
+
+RC CompareRecs(RM_FileHandle &fh, int numRecs)
+{
+    RC        rc;
+    int       n;
+    TestRec   *pRecBuf;
+    RID       rid;
+    char      stringBuf[STRLEN];
+    char      *found;
+    RM_Record rec;
+
+    float comp = 96.0;
+
+    found = new char[numRecs];
+    memset(found, 0, numRecs);
+
+    printf("\nverifying file contents\n");
+
+    RM_FileScan fs;
+    if ((rc=fs.OpenScan(fh,INT,sizeof(int),offsetof(TestRec, r),
+                        EQ_OP, &comp, NO_HINT)))
+        return (rc);
+
+    // For each record in the file
+    for (rc = GetNextRecScan(fs, rec), n = 0;
+         rc == 0;
+         rc = GetNextRecScan(fs, rec), n++) {
+
+        // Make sure the record is correct
+        if ((rc = rec.GetData((char *&)pRecBuf)) ||
+            (rc = rec.GetRid(rid)))
+            goto err;
+
+	PrintRecord(*pRecBuf);
+    }
+
+    if (rc != RM_EOF)
+        goto err;
+
+    if ((rc=fs.CloseScan()))
+        return (rc);
+
+    // Return ok
+    rc = 0;
+
+err:
+    fs.CloseScan();
+    delete[] found;
+    return (rc);
 }
