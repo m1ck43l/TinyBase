@@ -1,6 +1,5 @@
 #include "rm.h"
 #include "rm_rid.h"
-#include "rm_internal.h"
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
@@ -65,7 +64,7 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
 
     return rc;
   }
-  
+
   PageNum pageNum;
   rc = pfph.GetPageNum(pageNum);
   if (rc) return rc;

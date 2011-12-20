@@ -1,6 +1,5 @@
 #include "rm.h"
 #include "pf.h"
-#include "rm_internal.h"
 #include <cstring>
 #include <cstdio>
 #include <cstdlib>

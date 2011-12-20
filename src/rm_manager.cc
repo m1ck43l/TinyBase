@@ -1,6 +1,5 @@
 #include "rm.h"
 #include "pf.h"
-#include "rm_internal.h"
 #include <cstring>
 
 RM_Manager::RM_Manager(PF_Manager &pfm) : pf_manager(pfm)
