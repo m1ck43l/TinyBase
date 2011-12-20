@@ -44,6 +44,7 @@ public:
     // Return the RID associated with the record
     RC GetRid (RID &rid) const;
     RC Set(char*,int);
+    RC SetRID(RID &rid);
 private:
     char *pData;
     RID rid;
@@ -104,7 +105,7 @@ private:
     bool bOpen; //Savoir si le Scan ouvert
     bool ConditionOK(char *pData); //Renvoie vrai si le record satisfait les conditions demandées
 
-    RM_FileHandle rm_filehandle;
+    RM_FileHandle* rm_filehandle;
     RM_FileHeader rmfh;
     RC GetNextRID(RID &rid);
 
@@ -140,7 +141,7 @@ public:
 
     RC CloseFile  (RM_FileHandle &fileHandle);
 private:
-    PF_Manager pf_manager;
+    PF_Manager& pf_manager;
 };
 
 //

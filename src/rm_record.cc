@@ -11,13 +11,25 @@ RM_Record::~RM_Record() {
     // If the pointer has been allocated we free it
     if(pData != NULL) {
         delete[] (pData);
+	pData = NULL;
     }
 }
 
 RC RM_Record::Set(char* pData2, int recordSize) {
-    if (pData == NULL)
-        pData = new char[recordSize];
+    if (pData != NULL)
+        delete[] pData;
+
+    pData = new char[recordSize];
     memcpy(pData, pData2, recordSize);
+    return 0;
+}
+
+RC RM_Record::SetRID(RID& rid) {
+    if(pData == NULL)
+        return RM_INVALIDRECORD;
+
+    this->rid = rid;
+    this->bIsValid = true;
     return 0;
 }
 

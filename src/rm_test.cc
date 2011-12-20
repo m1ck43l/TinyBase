@@ -64,11 +64,15 @@ RM_Manager rmm(pfm);
 RC Test1(void);
 RC Test2(void);
 RC Test3(void);
+RC Test4(void);
+RC Test5(void);
 
 void PrintError(RC rc);
 void LsFile(char *fileName);
 void PrintRecord(TestRec &recBuf);
 RC AddRecs(RM_FileHandle &fh, int numRecs);
+RC DelRecs(RM_FileHandle &fh, int numRecs);
+RC UpRecs(RM_FileHandle &fh, int numRecs);
 RC VerifyFile(RM_FileHandle &fh, int numRecs);
 RC PrintFile(RM_FileHandle &fh);
 
@@ -84,12 +88,13 @@ RC GetNextRecScan(RM_FileScan &fs, RM_Record &rec);
 //
 // Array of pointers to the test functions
 //
-#define NUM_TESTS       3               // number of tests
+#define NUM_TESTS       4               // number of tests
 int (*tests[])() =                      // RC doesn't work on some compilers
 {
     Test1,
     Test2,
-    Test3
+    Test4,
+    Test5
 };
 
 //
@@ -242,6 +247,114 @@ RC AddRecs(RM_FileHandle &fh, int numRecs)
 }
 
 //
+// DelRecs
+//
+// Desc: Insert a number of records to the file and delete one of two (1 of 2)
+//
+RC DelRecs(RM_FileHandle &fh, int numRecs)
+{
+    RC      rc;
+    int     i;
+    TestRec recBuf;
+    RID     rid;
+    PageNum pageNum;
+    SlotNum slotNum;
+
+    // We set all of the TestRec to be 0 initially.  This heads off
+    // warnings that Purify will give regarding UMR since sizeof(TestRec)
+    // is 40, whereas actual size is 37.
+    memset((void *)&recBuf, 0, sizeof(recBuf));
+
+    printf("\nremoving %d records\n", numRecs);
+    for (i = 0; i < numRecs; i++) {
+        memset(recBuf.str, ' ', STRLEN);
+        sprintf(recBuf.str, "a%d", i);
+        recBuf.num = i;
+        recBuf.r = (float)i;
+        if ((rc = InsertRec(fh, (char *)&recBuf, rid)) ||
+            (rc = rid.GetPageNum(pageNum)) ||
+            (rc = rid.GetSlotNum(slotNum)))
+            return (rc);
+
+        if ((i + 1) % PROG_UNIT == 0){
+            printf("%d  ", i + 1);
+            fflush(stdout);
+        }
+
+	// Delete one of two
+	if (i%2 == 0)
+	    DeleteRec(fh, rid);
+    }
+    if (i % PROG_UNIT != 0)
+        printf("%d\n", i);
+    else
+        putchar('\n');
+
+    // Return ok
+    return (0);
+}
+
+//
+// UpRecs
+//
+// Desc: Add a number of records to the file and then update one of two
+//
+RC UpRecs(RM_FileHandle &fh, int numRecs)
+{
+    RC      rc;
+    int     i;
+    TestRec recBuf;
+    RID     rid;
+    PageNum pageNum;
+    SlotNum slotNum;
+
+    // We set all of the TestRec to be 0 initially.  This heads off
+    // warnings that Purify will give regarding UMR since sizeof(TestRec)
+    // is 40, whereas actual size is 37.
+    memset((void *)&recBuf, 0, sizeof(recBuf));
+
+    printf("\nupdating %d records\n", numRecs);
+    for (i = 0; i < numRecs; i++) {
+        memset(recBuf.str, ' ', STRLEN);
+        sprintf(recBuf.str, "a%d", i);
+        recBuf.num = i;
+        recBuf.r = (float)i;
+        if ((rc = InsertRec(fh, (char *)&recBuf, rid)) ||
+            (rc = rid.GetPageNum(pageNum)) ||
+            (rc = rid.GetSlotNum(slotNum)))
+            return (rc);
+
+        if ((i + 1) % PROG_UNIT == 0){
+            printf("%d  ", i + 1);
+            fflush(stdout);
+        }
+
+        if(i%2 == 0) {
+            RM_Record rec;
+	    
+            memset(recBuf.str, ' ', STRLEN);
+	    sprintf(recBuf.str, "%da", i);
+	    recBuf.num = i;
+	    recBuf.r = (float)i;
+
+            rec.Set((char *)&recBuf, STRLEN);
+	    rec.SetRID(rid);
+
+            UpdateRec(fh, rec);
+        }
+
+        PrintRecord(recBuf);
+    }
+    if (i % PROG_UNIT != 0)
+        printf("%d\n", i);
+    else
+        putchar('\n');
+
+    // Return ok
+    return (0);
+}
+
+//
 // VerifyFile
 //
 // Desc: verify that a file has records as added by AddRecs
@@ -278,6 +391,8 @@ RC VerifyFile(RM_FileHandle &fh, int numRecs)
 
         memset(stringBuf,' ', STRLEN);
         sprintf(stringBuf, "a%d", pRecBuf->num);
+
+	PrintRecord(*pRecBuf);
 
         if (pRecBuf->num < 0 || pRecBuf->num >= numRecs ||
             strcmp(pRecBuf->str, stringBuf) ||
@@ -507,13 +622,13 @@ RC Test3(void)
     RC rc;
     RM_FileHandle fh;
     TestRec recBuf;
-    
+
     printf("test3 starting ****************\n");
-    
+
     // Il faut provoquer toutes les erreurs et vérifier si le RC est le RC attendu
-    
+
     // liste des erreurs à tester
-    
+
     // RM_INVALIDRECORD    (START_RM_WARN + 0) // record has not yet been read
     // RM_FILEOPEN         (START_RM_WARN + 1) // File is already opened
     // RM_FILECLOSED       (START_RM_WARN + 2) // File is already closed
@@ -528,39 +643,92 @@ RC Test3(void)
     // RM_INVALIDRID       (START_RM_ERR - 0) // RID invalid
     // RM_RECORDTOOLONG    (START_RM_ERR - 1) // Record too long to fit in one page
     // RM_LASTERROR        RM_RECORDTOOLONG
-    
+
     // RM_INVALIDRECORD
-      
+
     // RM_FILEOPEN
     OpenFile(FILENAME, fh);
     rc = OpenFile(FILENAME, fh);
     if (rc == RM_FILEOPEN) printf("OK\n"); else printf("FAIL %d", rc); // printError(rc);
     CloseFile(FILENAME, fh);
-    
+
     // RM_FILECLOSED
     rc = CloseFile(FILENAME, fh);
     if (rc == RM_FILECLOSED) printf("OK\n"); else printf("FAIL %d", rc); // printError(rc);
-    
+
     // RM_SCANOPEN
-    
+
     // RM_SCANCLOSED
-    
+
     // RM_EOF
-    
+
     // RM_ATTRTOLONG
-    
+
     // RM_RECNOTFOUND
-    
+
     // RM_FILENOTFREE
-    
+
     // RM_LASTWARN
-    
+
     // RM_INVALIDRID
-    
+
     // RM_RECORDTOOLONG
     rc = CreateFile(FILENAME, 500000);
     if (rc == RM_RECORDTOOLONG) printf("OK\n"); else printf("FAIL %d", rc);
-    
+
     printf("\ntest3 done ********************\n");
+    return (0);
+}
+
+//
+// Test4 tests adding a few records to a file and then removing one of two
+//
+RC Test4(void)
+{
+    RC            rc;
+    RM_FileHandle fh;
+    RM_FileScan   fs;
+
+    printf("test4 starting ****************\n");
+
+    if ((rc = CreateFile(FILENAME, sizeof(TestRec))) ||
+        (rc = OpenFile(FILENAME, fh)) ||
+        (rc = DelRecs(fh, FEW_RECS)) ||
+        (rc = VerifyFile(fh, FEW_RECS)) ||
+        (rc = CloseFile(FILENAME, fh)))
+        return (rc);
+
+    LsFile(FILENAME);
+
+    if ((rc = DestroyFile(FILENAME)))
+        return (rc);
+
+    printf("\ntest4 done ********************\n");
+    return (0);
+}
+
+//
+// Test5 tests adding a few records to a file and then updating one of two
+//
+RC Test5(void)
+{
+    RC            rc;
+    RM_FileHandle fh;
+    RM_FileScan   fs;
+
+    printf("test5 starting ****************\n");
+
+    if ((rc = CreateFile(FILENAME, sizeof(TestRec))) ||
+        (rc = OpenFile(FILENAME, fh)) ||
+        (rc = UpRecs(fh, FEW_RECS)) ||
+        (rc = CloseFile(FILENAME, fh)))
+        return (rc);
+
+    LsFile(FILENAME);
+
+    if ((rc = DestroyFile(FILENAME)))
+        return (rc);
+
+    printf("\ntest5 done ********************\n");
     return (0);
 }
