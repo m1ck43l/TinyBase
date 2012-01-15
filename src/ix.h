@@ -17,7 +17,23 @@
 // IX_FileHeader
 //
 typedef struct ix_fileheader {
+    int tailleCle;
+    int tailleRID;
+    int taillePtr;
+    PageNum numRacine;
 } IX_FileHeader;
+
+//
+// IX_NoeudHeader
+//
+typedef struct ix_noeudHeader {
+    // Niveau sert à savoir si l'on est une feuille ou un noeud interne, niveau=0 correspond à une feuille
+    int niveau;
+    //Nombre maximum de pointeurs dans le noeud, il y aura donc nbMaxPtr-1 clés au max dans le noeud
+    int nbMaxPtr;
+    //Nombre de clé actuellement dans le noeud (il y a donc nbCle+2 pointeurs)
+    int nbCle;
+} IX_NoeudHeader;
 
 //
 // IX_IndexHandle: IX Index File interface
@@ -37,6 +53,25 @@ public:
 
     // Force index files to disk
     RC ForcePages();
+
+    //Insère récursivement l'entrée dans la page pageNum
+    RC Inserer(PageNum pageNum, void *pData, const RID &rid);
+
+    //Fonctions permettant d'obtenir ou de modifier la clé ou le pointeur d'un noeud à la position pos
+    void SetCle(PF_PageHandle &pf_ph, int pos, void *pData);
+    void SetPtr(PF_PageHandle &pf_ph, int pos, PageNum pageNum);
+    PageNum GetPtr(PF_PageHandle &pf_ph, int pos);
+    void* GetCle(PF_PageHandle &pf_ph, int pos);
+
+    //Fonction qui compare les clés selon les types
+    int Compare(void* pData1, void*pData2);
+
+    //Renvoie vrai si la clé est déjà dans la feuille
+    bool CleExiste(PF_PageHandle &pf_ph);
+
+    //Methode d'insertion dans les feuilles selon l'existence ou non de la clé
+    RC InsererFeuille(PageNum pageNum, void *pData, const RID &rid);
+    RC InsererFeuilleExiste(PageNum pageNum, void *pData, const RID &rid);
 
 private:
     bool bFileOpen;
