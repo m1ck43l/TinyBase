@@ -333,8 +333,52 @@ RC IX_IndexHandle::InsererBucket(PageNum pageNum, const RID &rid){
     memcpy(&header, pData, sizeof(IX_BucketHeader));
 
     if (header.nbRid == header.nbMax){
-        //Page de débordement à traiter plus tard
-        return IX_BUCKETFULL;
+        //On regarde s'il existe déjà un bucket de débordement
+        if (header.nextBuck != -1) {
+
+            rc = pf_filehandle->UnpinPage(pageNum);
+            if (rc) return rc;
+
+            return InsererBucket(header.nextBuck, rid);
+        }
+        else {
+            PF_PageHandle new_bucket;
+            rc = pf_filehandle->AllocatePage(new_bucket);
+            if (rc) return rc;
+
+            PageNum numNewBuck;
+            rc = new_bucket.GetPageNum(numNewBuck);
+            if (rc) return rc;
+
+            IX_BucketHeader new_header;
+            char *pData2;
+            rc = new_bucket.GetData(pData2);
+            if (rc) return rc;
+
+            memcpy(&new_header, pData2, sizeof(IX_BucketHeader));
+
+            header.nextBuck = numNewBuck;
+            new_header.nbMax = header.nbMax;
+            new_header.nbRid = 0;
+            new_header.nextBuck = -1;
+
+            memcpy(pData2, &new_header, sizeof(IX_BucketHeader));
+            memcpy(pData, &header, sizeof(IX_BucketHeader));
+
+            rc = pf_filehandle->MarkDirty(pageNum);
+            if (rc) return rc;
+
+            rc = pf_filehandle->MarkDirty(numNewBuck);
+            if (rc) return rc;
+
+            rc = pf_filehandle->UnpinPage(pageNum);
+            if (rc) return rc;
+
+            rc = pf_filehandle->UnpinPage(numNewBuck);
+            if (rc) return rc;
+
+            return InsererBucket(numNewBuck, rid);
+        }
     }
 
     //On décale le pointeur
@@ -413,6 +457,7 @@ RC IX_IndexHandle::InsererFeuille(PageNum pageNum, void *pData, const RID &rid){
     IX_BucketHeader bHeader;
     bHeader.nbRid = 0;
     bHeader.nbMax = (PF_PAGE_SIZE-sizeof(IX_BucketHeader))/sizeof(RID);
+    bHeader.nextBuck = -1;
 
     //On écrit le header sur la page
     char *pData3;

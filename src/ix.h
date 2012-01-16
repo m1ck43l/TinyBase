@@ -46,6 +46,7 @@ typedef struct ix_bucketheader {
     int nbRid;
     // Nombre maximal de RIC pouvant être stockés dans le bucket
     int nbMax;
+    PageNum nextBuck;
 } IX_BucketHeader;
 
 //
