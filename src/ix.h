@@ -21,6 +21,8 @@ typedef struct ix_fileheader {
     int tailleRID;
     int taillePtr;
     PageNum numRacine;
+    AttrType type;
+    int length;
 } IX_FileHeader;
 
 //
@@ -33,7 +35,18 @@ typedef struct ix_noeudHeader {
     int nbMaxPtr;
     //Nombre de clé actuellement dans le noeud (il y a donc nbCle+2 pointeurs)
     int nbCle;
+    PageNum pageMere;
 } IX_NoeudHeader;
+
+//
+// IX_BucketHeader
+//
+typedef struct ix_bucketheader {
+    // Nombre actuel de RID dans le bucket
+    int nbRid;
+    // Nombre maximal de RIC pouvant être stockés dans le bucket
+    int nbMax;
+} IX_BucketHeader;
 
 //
 // IX_IndexHandle: IX Index File interface
@@ -67,11 +80,13 @@ public:
     int Compare(void* pData1, void*pData2);
 
     //Renvoie vrai si la clé est déjà dans la feuille
-    bool CleExiste(PF_PageHandle &pf_ph);
+    bool CleExiste(PF_PageHandle &pf_ph, IX_NoeudHeader header, void *pData);
 
     //Methode d'insertion dans les feuilles selon l'existence ou non de la clé
     RC InsererFeuille(PageNum pageNum, void *pData, const RID &rid);
     RC InsererFeuilleExiste(PageNum pageNum, void *pData, const RID &rid);
+    RC InsererNoeudInterne(PageNum pageNum, void *pData);
+    RC InsererBucket(PageNum pageNum, const RID &rid);
 
 private:
     bool bFileOpen;
@@ -140,4 +155,6 @@ void IX_PrintError(RC rc);
 
 #define IX_IDXCREATEFAIL        (START_IX_ERR - 0) // Fail to create index file
 #define IX_LASTERROR            IX_IDXCREATEFAIL
+#define IX_KEYNOTEXISTS         (START_IX_ERR - 1) // La clé devrait exister
+#define IX_BUCKETFULL           (START_IX_ERR - 2) // Le bucket est plein, on ne peut plus insérer de RID
 #endif
