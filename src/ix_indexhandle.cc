@@ -148,11 +148,9 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
             new_header.niveau = header.niveau;
             new_header.pageMere = header.pageMere;
 
-            char *pData2;
-            rc = new_pagehandle.GetData(pData2);
+            char *pData3;
+            rc = new_pagehandle.GetData(pData3);
             if (rc) return rc;
-
-            memcpy(pData2, &new_header, sizeof(IX_NoeudHeader));
 
             //On la rempli avec la moitié de l'ancienne
             int max = header.nbMaxPtr;
@@ -164,6 +162,11 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
                 new_header.nbCle++;
                 header.nbCle--;
             }
+
+            //On recopie les header en mémoire
+            memcpy(pData3, &new_header, sizeof(IX_NoeudHeader));
+            memcpy(pData2, &header, sizeof(IX_NoeudHeader));
+
             //On marque les pages en dirty
             rc = pf_filehandle->MarkDirty(numPage);
             if (rc) return rc;
@@ -199,7 +202,7 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
             }
 
             //On récupère la clé à remonter
-            void *pData3 = GetCle(new_pagehandle,1);
+            void *pData4 = GetCle(new_pagehandle,1);
 
             //Si les feuilles étaient la racine, on doit en créer une nouvelle
             if (header.pageMere == -1) {
@@ -218,14 +221,24 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
                 racHeader.niveau = header.niveau + 1;
                 racHeader.pageMere = -1;
 
-                char *pData4;
-                rc = newRacine.GetData(pData4);
+                char *pData5;
+                rc = newRacine.GetData(pData5);
                 if (rc) return rc;
 
-                memcpy(pData4, &racHeader, sizeof(IX_NoeudHeader));
+                memcpy(pData5, &racHeader, sizeof(IX_NoeudHeader));
 
                 header.pageMere = racNum;
                 new_header.pageMere = racNum;
+
+                //On a changé les header, on les remet en mémoire et on marque dirty
+                memcpy(pData3, &new_header, sizeof(IX_NoeudHeader));
+                memcpy(pData2, &header, sizeof(IX_NoeudHeader));
+
+                rc = pf_filehandle->MarkDirty(newPageNum);
+                if (rc) return rc;
+
+                rc = pf_filehandle->MarkDirty(numPage);
+                if (rc) return rc;
 
                 rc = pf_filehandle->UnpinPage(newPageNum);
                 if (rc) return rc;
@@ -239,7 +252,7 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
                 rc = pf_filehandle->UnpinPage(racNum);
                 if (rc) return rc;
 
-                rc = InsererNoeudInterne(racNum,pData4);
+                rc = InsererNoeudInterne(racNum,pData4, numPage, newPageNum);
                 if (rc) return rc;
             }
 
@@ -250,7 +263,7 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
             rc = pf_filehandle->UnpinPage(newPageNum);
             if (rc) return rc;
 
-            rc = InsererNoeudInterne(header.pageMere, pData3);
+            rc = InsererNoeudInterne(header.pageMere, pData4, numPage, newPageNum);
             if (rc) return rc;
         }
     }
@@ -331,6 +344,11 @@ RC IX_IndexHandle::InsererBucket(PageNum pageNum, const RID &rid){
 
     header.nbRid++;
 
+    rc = pagehandle.GetData(pData);
+    if (rc) return rc;
+
+    memcpy(pData, &header, sizeof(IX_BucketHeader));
+
     rc = pf_filehandle->MarkDirty(pageNum);
     if (rc) return rc;
 
@@ -376,6 +394,7 @@ RC IX_IndexHandle::InsererFeuille(PageNum pageNum, void *pData, const RID &rid){
 
     //On insère la nouvelle valeur à la position pos
     SetCle(pagehandle, pos, pData);
+    header.nbCle++;
 
     //On crée un nouveau bucket pour insérer le rid
     PF_PageHandle bucket;
@@ -401,6 +420,7 @@ RC IX_IndexHandle::InsererFeuille(PageNum pageNum, void *pData, const RID &rid){
     if (rc) return rc;
 
     memcpy(pData3, &bHeader, sizeof(IX_BucketHeader));
+    memcpy(pData2, &header, sizeof(IX_NoeudHeader));
 
     //Les 2 pages sont dirty, et on les unpin avant d'insérer le rid dans le bucket
     rc = pf_filehandle->MarkDirty(pageNum);
@@ -417,6 +437,288 @@ RC IX_IndexHandle::InsererFeuille(PageNum pageNum, void *pData, const RID &rid){
 
     return InsererBucket(numBucket, rid);
 
+}
+
+RC IX_IndexHandle::InsererNoeudInterne(PageNum pageNum, void *pData, PageNum numPageGauche, PageNum numPageDroite){
+
+    RC rc;
+    PF_PageHandle pagehandle;
+
+    //On récupère le noeud
+    rc = pf_filehandle->GetThisPage(pageNum, pagehandle);
+    if (rc) return rc;
+
+    //On récupère le header
+    IX_NoeudHeader header;
+    char *pData2;
+
+    rc = pagehandle.GetData(pData2);
+    if (rc) return rc;
+
+    memcpy(&header, pData2, sizeof(IX_NoeudHeader));
+
+    //On regarde s'il reste de la place
+    if(header.nbCle<(header.nbMaxPtr-1)) {
+
+        //On trouve à quelle position insérer la nouvelle clé
+        int pos = 0, i;
+
+        for (i=1; i<=header.nbCle; i++){
+            if (Compare(pData, GetCle(pagehandle, i)) < 0){
+                //Cela veut dire qu'avant nous étions supérieur, et plus maintenant
+                break;
+            }
+        }
+        pos = i;
+
+        //On décale toutes les clés supérieures
+        for (i=header.nbCle; i>=pos; i--){
+            //On décale les pointeurs à droite des clés cette fois
+            SetPtr(pagehandle, i+2, GetPtr(pagehandle, i+1));
+            SetCle(pagehandle, i+1, GetCle(pagehandle, i));
+        }
+
+        //On insère la nouvelle valeur à la position pos
+        SetCle(pagehandle, pos, pData);
+        header.nbCle++;
+
+        //On change les pointeurs vers les nouvelles pages splittées
+        SetPtr(pagehandle, pos+1, numPageDroite);
+        SetPtr(pagehandle, pos, numPageGauche);
+
+        //L'insertion est terminée
+        memcpy(pData2, &header, sizeof(IX_NoeudHeader));
+
+        rc = pf_filehandle->MarkDirty(pageNum);
+        if (rc) return rc;
+
+        return pf_filehandle->MarkDirty(pageNum);
+    }
+
+    else {//Sinon, on doit splitter le noeud
+        //On insérera pas le pointeur numPageGauche, car il est déjà présent dans la liste
+        //Et cela a été pris en compte lors du déplacement des clés et des pointeurs
+
+        //On crée un nouveau noeud
+        PF_PageHandle new_pagehandle;
+        rc = pf_filehandle->AllocatePage(new_pagehandle);
+        if (rc) return rc;
+
+        //On crée le header du noeud
+        IX_NoeudHeader new_header;
+        new_header.nbCle = 0;
+        new_header.nbMaxPtr = header.nbMaxPtr;
+        new_header.niveau = header.niveau;
+        new_header.pageMere = header.pageMere;
+
+        char *pData3;
+        rc = new_pagehandle.GetData(pData3);
+        if (rc) return rc;
+
+        //On récupère le numéro de la page
+        PageNum newNum;
+        rc = new_pagehandle.GetPageNum(newNum);
+        if (rc) return rc;
+
+        //On cherche à quelle place la clé doit se placer, pour savoir quelle clé remonter
+        int max = header.nbMaxPtr;
+        int ordre = max/2, i, pos=0;
+
+        for (i=1; i<=header.nbCle; i++){
+            if (Compare(pData, GetCle(pagehandle, i)) < 0){
+                //Cela veut dire qu'avant nous étions supérieur, et plus maintenant
+                break;
+            }
+        }
+        pos = i;
+        void *pCleARemonter;
+
+        if(pos<=ordre){
+            //La clé sera insérée dans le noeud de gauche, la clé à remonter sera celle à la position ordre
+            pCleARemonter = GetCle(pagehandle, ordre);
+
+            //On insère toutes les clés dans le nouveau noeud
+            for (i=ordre+1; i<header.nbMaxPtr; i++){
+                SetCle(new_pagehandle, i-ordre ,GetCle(pagehandle,i));
+                SetPtr(new_pagehandle, i-ordre, GetPtr(pagehandle,i));
+                new_header.nbCle++;
+                header.nbCle--;
+                //On change aussi tous les parents des pointeurs que l'on ajoute
+                rc = ChangerParent(GetPtr(new_pagehandle,i-ordre), newNum);
+                if (rc) return rc;
+            }
+            //Ici on a donc i qui vaut nbMaxPtr
+            //On oublie pas d'insérer le dernier pointeur
+            SetPtr(new_pagehandle,i-ordre, GetPtr(pagehandle,i));
+
+            //On décale maintenant tous les pointeurs du noeud de gauche pour insérer la nouvelle clé
+            for (i=ordre; i>=pos; i--){
+                SetCle(pagehandle, i+1, GetCle(pagehandle, i));
+                SetPtr(pagehandle, i+2, GetPtr(pagehandle, i+1));
+            }
+            SetCle(pagehandle,pos,pData);
+            SetPtr(pagehandle,pos+1,numPageDroite);
+            //On a pas besoin d'augmenter le nombre de clé, puisque l'on retire la clé à remonter
+        }
+
+        else if (pos == ordre+1) {
+            //La clé à insérer est aussi celle à remonter
+            pCleARemonter = pData;
+
+            //On insère les bonnes clés dans le nouveau noeud
+            for (i=ordre+1; i<header.nbMaxPtr; i++){
+                SetCle(new_pagehandle, i-ordre, GetCle(pagehandle,i));
+                SetPtr(new_pagehandle, i-ordre+1, GetPtr(pagehandle, i+1));
+                header.nbCle--;
+                new_header.nbCle++;
+                //On change les parents
+                rc = ChangerParent(GetPtr(new_pagehandle, i-ordre+1),newNum);
+                if (rc) return rc;
+            }
+            //Il faut aussi penser au pointeur qui remontait avec la clé
+            SetPtr(new_pagehandle,1,numPageDroite);
+            rc = ChangerParent(numPageDroite, newNum);
+            if (rc) return rc;
+        }
+        else {//On va donc insérer dans le noeud de droite
+            pCleARemonter = GetCle(pagehandle, ordre+1);
+            header.nbCle--;
+
+            //On ajoute d'abord les clés plus petites
+            for (i=ordre+2; i<=pos; i++) {
+                SetCle(new_pagehandle, i-ordre-1, GetCle(pagehandle,i));
+                SetPtr(new_pagehandle, i-ordre-1, GetPtr(pagehandle,i));
+                header.nbCle--;
+                new_header.nbCle++;
+                rc = ChangerParent(GetPtr(new_pagehandle, i-ordre-1), newNum);
+                if (rc) return rc;
+            }
+            //On ajoute la nouvelle clé et le pointeur
+            SetCle(new_pagehandle,pos-ordre-1,pData);
+            SetPtr(new_pagehandle,pos-ordre,numPageDroite);
+            rc = ChangerParent(numPageDroite, newNum);
+            if (rc) return rc;
+            //Pas besoin d'augmenter nbCle car on la fait dans la boucle précédente pour pos
+
+            //On fini de recopier les clés
+            for (i=pos;i<header.nbMaxPtr;i++){
+                SetCle(new_pagehandle, pos-ordre, GetCle(pagehandle, i));
+                SetPtr(new_pagehandle, pos-ordre+1, GetPtr(pagehandle, i+1));
+                header.nbCle--;
+                new_header.nbCle++;
+                rc = ChangerParent(GetPtr(new_pagehandle,pos-ordre+1), newNum);
+                if (rc) return rc;
+            }
+        }
+
+        //On vérifier maintenant si le noeud splitté était à la racine, car on doit alors recréer une racine
+
+        if(header.pageMere == -1){
+
+            PF_PageHandle new_racine;
+
+            rc = pf_filehandle->AllocatePage(new_racine);
+            if (rc) return rc;
+
+            PageNum newNumRac;
+            rc = new_racine.GetPageNum(newNumRac);
+            if (rc) return rc;
+
+            header.pageMere = newNumRac;
+            new_header.pageMere = newNumRac;
+
+            ix_fileheader.numRacine = newNumRac;
+
+            //On crée le header de la racine
+            IX_NoeudHeader header_rac;
+            header_rac.nbCle = 0;
+            header_rac.nbMaxPtr = header.nbMaxPtr;
+            header_rac.niveau = header.niveau + 1;
+            header_rac.pageMere = -1;
+
+            //On le copie en mémoire
+            char *pData4;
+            rc = new_racine.GetData(pData4);
+            if (rc) return rc;
+
+            memcpy(pData4, &header_rac, sizeof(IX_NoeudHeader));
+            memcpy(pData3, &new_header, sizeof(IX_NoeudHeader));
+            memcpy(pData2, &header, sizeof(IX_NoeudHeader));
+
+            rc = pf_filehandle->MarkDirty(pageNum);
+            if (rc) return rc;
+
+            rc = pf_filehandle->MarkDirty(newNum);
+            if (rc) return rc;
+
+            rc = pf_filehandle->MarkDirty(newNumRac);
+            if (rc) return rc;
+
+            rc = pf_filehandle->UnpinPage(pageNum);
+            if (rc) return rc;
+
+            rc = pf_filehandle->UnpinPage(newNum);
+            if (rc) return rc;
+
+            rc = pf_filehandle->UnpinPage(newNumRac);
+            if (rc) return rc;
+
+            return InsererNoeudInterne(newNumRac, pCleARemonter, pageNum, newNum);
+        }
+
+        else {
+            //On était pas à la racine, donc on insère la clé à remonter dans la page mère
+            //On recopie les headers et on mark dirty
+            memcpy(pData3, &new_header, sizeof(IX_NoeudHeader));
+            memcpy(pData2, &header, sizeof(IX_NoeudHeader));
+
+            rc = pf_filehandle->MarkDirty(pageNum);
+            if (rc) return rc;
+
+            rc = pf_filehandle->MarkDirty(newNum);
+            if (rc) return rc;
+
+            rc = pf_filehandle->UnpinPage(pageNum);
+            if (rc) return rc;
+
+            rc = pf_filehandle->UnpinPage(newNum);
+            if (rc) return rc;
+
+            return InsererNoeudInterne(header.pageMere, pCleARemonter, pageNum, newNum);
+        }
+
+    }
+
+    //Normalement nous n'arrivons jamais ici
+    return 0;
+}
+
+RC IX_IndexHandle::ChangerParent(PageNum pageNum, PageNum numParent){
+    RC rc;
+
+    //On prend d'abord un handle de la page où l'on doit modifier
+    PF_PageHandle pagehandle;
+
+    rc = pf_filehandle->GetThisPage(pageNum, pagehandle);
+    if (rc) return rc;
+
+    //On récupère le header
+    IX_NoeudHeader header;
+    char *pData;
+
+    rc = pagehandle.GetData(pData);
+    if (rc) return rc;
+
+    memcpy(&header, pData, sizeof(IX_NoeudHeader));
+
+    header.pageMere = numParent;
+
+    memcpy(pData, &header, sizeof(IX_NoeudHeader));
+
+    rc = pf_filehandle->MarkDirty(pageNum);
+    if (rc) return rc;
+
+    return pf_filehandle->UnpinPage(pageNum);
 }
 
 bool IX_IndexHandle::CleExiste(PF_PageHandle &pf_ph, IX_NoeudHeader header, void *pData){

@@ -85,8 +85,11 @@ public:
     //Methode d'insertion dans les feuilles selon l'existence ou non de la clé
     RC InsererFeuille(PageNum pageNum, void *pData, const RID &rid);
     RC InsererFeuilleExiste(PageNum pageNum, void *pData, const RID &rid);
-    RC InsererNoeudInterne(PageNum pageNum, void *pData);
+    RC InsererNoeudInterne(PageNum pageNum, void *pData, PageNum numPageGauche, PageNum numPageDroite);
     RC InsererBucket(PageNum pageNum, const RID &rid);
+
+    //Fonction qui change le lien de parenté dans l'arbe
+    RC ChangerParent(PageNum pageNum, PageNum numParent);
 
 private:
     bool bFileOpen;
