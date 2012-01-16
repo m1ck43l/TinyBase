@@ -87,7 +87,7 @@ public:
     RC InsererFeuilleExiste(PageNum pageNum, void *pData, const RID &rid);
     RC InsererNoeudInterne(PageNum pageNum, void *pData, PageNum numPageGauche, PageNum numPageDroite);
     RC InsererBucket(PageNum pageNum, const RID &rid);
-
+    
     //Fonction qui change le lien de parenté dans l'arbe
     RC ChangerParent(PageNum pageNum, PageNum numParent);
 
@@ -117,6 +117,26 @@ public:
 
     // Close index scan
     RC CloseScan();
+    
+private:
+    bool bScanOpen;
+    
+    IX_IndexHandle *ix_indexhandle;
+    
+    IX_NoeudHeader *currentHeaderNode;
+    
+    //On crée une copie de tous les paramètres pour les utilise
+    void *val; //Contiendra la valeur que l'on devra comparer
+               //C'est un void* car on ne connait pas encore le type de value
+    AttrType type;
+    int length;
+    int offset;
+    CompOp op;
+
+    //On ajoute des variables qui serviront à éviter trop de cast
+    int valInt;
+    float valFloat;
+    char *valString; //C'est un char* pour pouvoir utiliser strncmp
 };
 
 //
