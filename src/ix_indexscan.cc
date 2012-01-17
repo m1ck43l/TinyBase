@@ -25,33 +25,22 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, CompOp compOp, void
         
     //On initialise ensuite toutes les variables dont on aura besoin
     //dans la méthode GetNextEntry
-    ix_indexhandle = const_cast<IX_IndexHandle*>(&indexHandle);
+    type = indexHandle.ix_fileheader.type;
+    length = indexHandle.ix_fileheader.length;
+    taillePtr = indexHandle.ix_fileheader.taillePtr;
+    tailleCle = indexHandle.ix_fileheader.tailleCle;
     op = compOp;
     val = value;
-    type = ix_indexhandle.ix_fileheader.type;
+    
+    pf_filehandle = indexHandle.pf_filehandle;
         
     bScanOpen = true;
     
-    //Si on cherche quelque chose (value != NULL) on copie exactement la variable value
-    //On caste directement pour éviter d'avoir à le refaire plus tard
-    if (value != NULL) {
-        switch (type) {
-            case INT : {
-                valInt = *((int*)(value));
-                break;
-            }
-            case FLOAT : {
-                valFloat = *((float*)(value));
-                break;
-            }
-            case STRING : {
-                if (length > MAXSTRINGLEN) return RM_ATTRTOLONG;
-                    valString = (char*)malloc(length);
-                memcpy(valString, value, length);
-                break;
-            }
-        }
-    }
+    // on cherche la premiere feuille/bucket/rid dont la valeur match avec val
+    rc = GetFirstRID(rid);
+    if (rc) return rc;
+    
+    currentRID = rid;
     
 
 // produce RID of all records whose indexed attributes match to value
@@ -66,7 +55,7 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, CompOp compOp, void
 RC IX_IndexScan::GetNextEntry(RID &rid) {
     
     RC rc;
-    PF_PageHandle pf_pagehandle;
+    PF_PageHandle *pf_pagehandle;
     
     // set rid to be the next record during the scan
     // return IX_EOF if no index entries
@@ -102,3 +91,46 @@ RC IX_IndexScan::CloseScan() {
     return 0;
 }
 
+// Find first RID that matches with val
+RC IX_IndexScan::GetFirstRID(&rid) {
+    
+    PF_PageHandle *pf_pagehandle;
+    
+    return 0;
+}
+
+int IX_IndexScan::Compare(void *pData1, void *pData2) {
+    switch(type){
+
+        case INT : {
+
+            int i1, i2;
+            memcpy(&i1, pData1, sizeof(int));
+            memcpy(&i2, pData2, sizeof(int));
+            if (i1 < i2) return -1;
+            if (i1 > i2) return +1;
+            return 0;
+            break;
+        }
+        case FLOAT : {
+
+            float f1, f2;
+            memcpy(&f1, pData1, sizeof(float));
+            memcpy(&f2, pData2, sizeof(float));
+            if (f1 < f2) return -1;
+            if (f1 > f2) return +1;
+            return 0;
+            break;
+        }
+        case STRING : {
+
+            string s1, s2;
+            s1.reserve(length);
+            s2.reserve(length);
+            memcpy(&s1, pData1, length);
+            memcpy(&s2, pData2, length);
+
+            return s1.compare(s2);
+        }
+    }
+}

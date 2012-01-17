@@ -36,6 +36,7 @@ typedef struct ix_noeudHeader {
     PageNum pageMere;
     PageNum prevPage;
     PageNum nextPage;
+    
 } IX_NoeudHeader;
 
 //
@@ -119,25 +120,29 @@ public:
     // Close index scan
     RC CloseScan();
     
+    RC GetFirstRID(RID &rid);
+    
+    int Compare(void *pData1, void *pData2);
+    
 private:
     bool bScanOpen;
     
     IX_IndexHandle *ix_indexhandle;
-    
-    IX_NoeudHeader *currentHeaderNode;
+    PF_FileFandle *pf_filehandle;
+
+    RID *currentRID;
+    int currentPageNum;
+    int currentBucketNum;
+    bool emptyBucket;
     
     //On crée une copie de tous les paramètres pour les utilise
     void *val; //Contiendra la valeur que l'on devra comparer
                //C'est un void* car on ne connait pas encore le type de value
     AttrType type;
     int length;
-    int offset;
+    int taillePtr;
+    int tailleCle;
     CompOp op;
-
-    //On ajoute des variables qui serviront à éviter trop de cast
-    int valInt;
-    float valFloat;
-    char *valString; //C'est un char* pour pouvoir utiliser strncmp
 };
 
 //
