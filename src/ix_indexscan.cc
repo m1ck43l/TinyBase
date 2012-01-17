@@ -88,18 +88,6 @@ RC IX_IndexScan::GetNextEntry(RID &rid) {
     return GetNextRID(currentRID);
 }
 
-RC IX_IndexScan::GetNextRID(RID &rid){
-
-    //Si on était dans un bucket et qu'il n'est pas vide on continue de le vider
-    if (!emptyBucket) {
-        return GetNextRIDinBucket(rid);
-    }
-    else {
-        //Le bucket est donc vide, on cherche le prochain bucket valable
-        return GetNextBucket(rid);
-    }
-}
-
 RC IX_IndexScan::GetNextRIDinBucket(RID &rid){
 
     //On récupère le pagehandle du bucket courant
@@ -126,7 +114,8 @@ RC IX_IndexScan::GetNextRIDinBucket(RID &rid){
             rc = pf_filehandle->UnpinPage(currentBucketNum);
             if (rc) return rc;
 
-            return GetNextBucket(rid);
+            rc = this->GetNextBucket(rid);
+            return rc;
         }
         else {
             currentBucketNum = header.nextBuck;
@@ -250,6 +239,26 @@ RC IX_IndexScan::GetFirstRID(PageNum pageNum, RID &rid) {
         }
     }
     
+    return 0;
+}
+
+RC IX_IndexScan::GetNextRID(RID &rid){
+
+    //Si on était dans un bucket et qu'il n'est pas vide on continue de le vider
+    if (!emptyBucket) {
+        return GetNextRIDinBucket(rid);
+    }
+    else {
+        //Le bucket est donc vide, on cherche le prochain bucket valable
+        return GetNextBucket(rid);
+    }
+}
+
+RC IX_IndexScan::GetFirstBucket(PageNum pageNum, RID &rid){
+    return 0;
+}
+
+RC IX_IndexScan::GetNextBucket(RID &rid){
     return 0;
 }
 

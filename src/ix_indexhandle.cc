@@ -2,6 +2,7 @@
 #include <cstring>
 #include <string>
 #include <cstdlib>
+#include <iostream>
 
 using namespace std;
 
@@ -55,7 +56,6 @@ IX_IndexHandle::~IX_IndexHandle() {
          rc = pf_filehandle->UnpinPage(pageNum);
          if (rc) return rc;
      }
-
      //Une fois arrivé ici, la racine existe forcément
      rc = Inserer(ix_fileheader.numRacine, pData, rid);
 
@@ -209,11 +209,25 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
                 if (rc) return rc;
             }
 
+            //On reprend les handles car on les avait enlever pour faire la récursion dans insérer
+            rc = pf_filehandle->GetThisPage(newPageNum, new_pagehandle);
+            if (rc) return rc;
+
             //On récupère la clé à remonter
             void *pData4 = GetCle(new_pagehandle,1);
 
+            rc = pf_filehandle->UnpinPage(newPageNum);
+            if (rc) return rc;
+
             //Si les feuilles étaient la racine, on doit en créer une nouvelle
             if (header.pageMere == -1) {
+
+                //On reprend les handles car on les avait enlever pour faire la récursion dans insérer
+                rc = pf_filehandle->GetThisPage(numPage,pf_pagehandle);
+                if (rc) return rc;
+
+                rc = pf_filehandle->GetThisPage(newPageNum, new_pagehandle);
+                if (rc) return rc;
 
                 PF_PageHandle newRacine;
                 rc = pf_filehandle->AllocatePage(newRacine);
@@ -267,12 +281,6 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
             }
 
             //On remonte la 1ere clé de la nouvelle feuille
-            rc = pf_filehandle->UnpinPage(numPage);
-            if (rc) return rc;
-
-            rc = pf_filehandle->UnpinPage(newPageNum);
-            if (rc) return rc;
-
             rc = InsererNoeudInterne(header.pageMere, pData4, numPage, newPageNum);
             if (rc) return rc;
         }
@@ -305,6 +313,7 @@ RC IX_IndexHandle::InsererFeuilleExiste(PageNum pageNum, void *pData, const RID 
     bool trouve = false;
 
     while ( (i<=header.nbCle) && !trouve ){
+
         if(Compare(pData, GetCle(pagehandle, i)) == 0) {
             //On est donc sur la bonne clé
             trouve = true;
@@ -788,7 +797,7 @@ bool IX_IndexHandle::CleExiste(PF_PageHandle &pf_ph, IX_NoeudHeader header, void
     bool trouve = false;
 
     while( (i<=header.nbCle) && (!trouve)){
-        if (Compare(GetCle(pf_ph,i), pData)) trouve = true;
+        if (Compare(GetCle(pf_ph,i), pData) == 0) trouve = true;
         i++;
     }
     return trouve;

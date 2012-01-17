@@ -192,7 +192,7 @@ void IX_PrintError(RC rc);
 #define IX_LASTWARN             IX_EOF
 
 #define IX_IDXCREATEFAIL        (START_IX_ERR - 0) // Fail to create index file
-#define IX_LASTERROR            IX_IDXCREATEFAIL
 #define IX_KEYNOTEXISTS         (START_IX_ERR - 1) // La clé devrait exister
-#define IX_BUCKETFULL           (START_IX_ERR - 2) // Le bucket est plein, on ne peut plus insérer de RID
+#define IX_LASTERROR            IX_KEYNOTEXISTS
+
 #endif

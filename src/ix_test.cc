@@ -223,7 +223,6 @@ RC InsertIntEntries(IX_IndexHandle &ih, int nEntries)
       RID rid(value, value*2);
       if ((rc = ih.InsertEntry((void *)&value, rid)))
          return (rc);
-
       if((i + 1) % PROG_UNIT == 0){
          // cast to long for PC's
          printf("\r\t%d%%    ", (int)((i+1)*100L/nEntries));
@@ -524,22 +523,22 @@ RC Test2(void)
 
    if ((rc = ixm.CreateIndex(FILENAME, index, INT, sizeof(int))) ||
          (rc = ixm.OpenIndex(FILENAME, index, ih)) ||
-         (rc = InsertIntEntries(ih, FEW_ENTRIES)) ||
+         (rc = InsertIntEntries(ih, MANY_ENTRIES)) ||
          (rc = ixm.CloseIndex(ih)) ||
          (rc = ixm.OpenIndex(FILENAME, index, ih)) ||
 
          // ensure inserted entries are all there
-         (rc = VerifyIntIndex(ih, 0, FEW_ENTRIES, TRUE)) ||
+        // (rc = VerifyIntIndex(ih, 0, FEW_ENTRIES, TRUE)) ||
 
          // ensure an entry not inserted is not there
-         (rc = VerifyIntIndex(ih, FEW_ENTRIES, 1, FALSE)) ||
+         //(rc = VerifyIntIndex(ih, FEW_ENTRIES, 1, FALSE)) ||
          (rc = ixm.CloseIndex(ih)))
       return (rc);
 
    LsFiles(FILENAME);
 
    if ((rc = ixm.DestroyIndex(FILENAME, index)))
-      return (rc);
+       return (rc);
 
    printf("Passed Test 2\n\n");
    return (0);
