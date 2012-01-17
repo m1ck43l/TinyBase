@@ -122,8 +122,11 @@ public:
     RC CloseScan();
     
     RC GetFirstRID(PageNum pageNum, RID &rid);
+    RC GetNextRID(RID &rid);
+    RC GetNextRIDinBucket(RID &rid);
 
     RC GetFirstBucket(PageNum pageNum, RID &rid);
+    RC GetNextBucket(RID &rid);
     
     int Compare(void *pData1, void *pData2);
     PageNum GetPtr(PF_PageHandle &pf_ph, int pos);
@@ -139,6 +142,7 @@ private:
     int currentPageNum;
     int currentBucketNum;
     bool emptyBucket;
+    int currentRIDpos;
     
     //On crée une copie de tous les paramètres pour les utilise
     void *val; //Contiendra la valeur que l'on devra comparer

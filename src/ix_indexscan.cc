@@ -35,6 +35,7 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, CompOp compOp, void
     tailleCle = indexHandle.ix_fileheader.tailleCle;
     op = compOp;
     val = value;
+    currentRIDpos = 0;
     
     pf_filehandle = indexHandle.pf_filehandle;
         
@@ -57,7 +58,6 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, CompOp compOp, void
 RC IX_IndexScan::GetNextEntry(RID &rid) {
     
     RC rc;
-    PF_PageHandle *pf_pagehandle;
     
     // set rid to be the next record during the scan
     // return IX_EOF if no index entries
@@ -67,19 +67,39 @@ RC IX_IndexScan::GetNextEntry(RID &rid) {
     if (bScanOpen == false)
         return IX_FILECLOSED;
         
+    //On vérifie si le currentRID est valable (pageNum != -1)
+    PageNum pageRID;
+    rc = currentRID.GetPageNum(pageRID);
+    if (rc) return rc;
 
-        
-    // check if value match
-    
-    
-    // set entry to next
-    
-    // reach end of file
-    
-    
-    
+    if (pageRID == -1){
+        return IX_EOF;
+    }
 
-    return 0;
+    //Sinon on modifie le rid en currentRID et on cherche le suivant
+    rc = rid.SetPageNum(pageRID);
+    if (rc) return rc;
+    SlotNum slotRID;
+
+    rc = currentRID.GetSlotNum(slotRID);
+    if (rc) return rc;
+
+    rc = rid.SetSlotNum(slotRID);
+    if (rc) return rc;
+
+    return GetNextRID(currentRID);
+}
+
+RC IX_IndexScan::GetNextRID(RID &rid){
+
+    //Si on était dans un bucket et qu'il n'est pas vide on continue de le vider
+    if (!emptyBucket) {
+        return GetNextRIDinBucket(rid);
+    }
+    else {
+        //Le bucket est donc vide, on cherche le prochain bucket valable
+        return GetNextBucket(rid);
+    }
 }
 
 // Close index scan
