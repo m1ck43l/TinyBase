@@ -56,7 +56,7 @@ typedef struct ix_bucketheader {
 class IX_IndexHandle {
     friend class IX_Manager;
     friend class IX_IndexScan;
-
+    
 public:
     IX_IndexHandle();
     ~IX_IndexHandle();
@@ -124,7 +124,7 @@ public:
     RC GetFirstRID(PageNum pageNum, RID &rid);
     RC GetNextRID(RID &rid);
     RC GetNextRIDinBucket(RID &rid);
-
+    
     RC GetFirstBucket(PageNum pageNum, RID &rid);
     RC GetNextBucket(RID &rid);
     
@@ -139,6 +139,7 @@ private:
     PF_FileHandle *pf_filehandle;
 
     RID currentRID;
+    int currentPagePos;
     PageNum currentPageNum;
     PageNum currentBucketNum;
     bool emptyBucket;
@@ -194,5 +195,4 @@ void IX_PrintError(RC rc);
 #define IX_IDXCREATEFAIL        (START_IX_ERR - 0) // Fail to create index file
 #define IX_KEYNOTEXISTS         (START_IX_ERR - 1) // La clé devrait exister
 #define IX_LASTERROR            IX_KEYNOTEXISTS
-
 #endif

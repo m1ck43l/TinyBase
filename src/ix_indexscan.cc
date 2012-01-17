@@ -45,6 +45,8 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, CompOp compOp, void
     rc = GetFirstRID(indexHandle.ix_fileheader.numRacine, currentRID);
     if (rc) return rc;
     
+    
+    
 
 // produce RID of all records whose indexed attributes match to value
 
@@ -158,6 +160,18 @@ RC IX_IndexScan::GetNextRIDinBucket(RID &rid){
     return 0;
 }
 
+RC IX_IndexScan::GetNextRID(RID &rid){
+
+    //Si on était dans un bucket et qu'il n'est pas vide on continue de le vider
+    if (!emptyBucket) {
+        return GetNextRIDinBucket(rid);
+    }
+    else {
+        //Le bucket est donc vide, on cherche le prochain bucket valable
+        return GetNextBucket(rid);
+    }
+}
+
 // Close index scan
 RC IX_IndexScan::CloseScan() {
     
@@ -242,23 +256,326 @@ RC IX_IndexScan::GetFirstRID(PageNum pageNum, RID &rid) {
     return 0;
 }
 
-RC IX_IndexScan::GetNextRID(RID &rid){
+RC IX_IndexScan::GetFirstBucket(PageNum pageNum, RID &rid) {
+    PF_PageHandle pf_pagehandle;
 
-    //Si on était dans un bucket et qu'il n'est pas vide on continue de le vider
-    if (!emptyBucket) {
-        return GetNextRIDinBucket(rid);
-    }
-    else {
-        //Le bucket est donc vide, on cherche le prochain bucket valable
-        return GetNextBucket(rid);
-    }
-}
+    rc = pf_filehandle->GetThisPage(pageNum, pf_pagehandle);
+    if (rc) return rc;
+    
+    //On récupère le header du noeud
+    IX_NoeudHeader header;
+    char* pData2;
+    rc = pf_pagehandle.GetData(pData2);
+    if (rc) return rc;
 
-RC IX_IndexScan::GetFirstBucket(PageNum pageNum, RID &rid){
+    memcpy(&header, pData2, sizeof(IX_NoeudHeader));
+    
+    //On récupère tout de suite le numéro de la page courante
+    PageNum numPage;
+    rc = pf_pagehandle.GetPageNum(numPage);
+    if (rc) return rc;
+
+    //Si le noeud n'est pas une feuille, alors on cherche dans quelle feuille se trouve le rid cherche
+    int i;
+    void* pCle;
+    bool valIsFound = false;
+
+    //Si on est inférieur à la clé comparée, la valeur doit se trouver sur le pointeur précédent
+    for (i=1; i<=header.nbCle; i++){
+        pCle=GetCle(pagehandle, i);
+        
+        if (Compare(val, pCle) <= 0) {
+            if (Compare(val, pCle) == 0) {
+                valIsFound = true;
+            }
+            break;
+        }
+    }
+
+    switch(op) : {
+        case NO_OP:
+            currentBucketNum = GetPtr(pagehandle,1);
+            currentPagePos = 1;
+        break;
+        
+        case EQ_OP:
+            if (valIsFound) {
+                currentBucketNum = GetPtr(pagehandle,i);
+                currentPagePos = i;
+            }
+            else {
+                currentBucketNum = -1;
+                currentPagePos = -1;
+                return IX_EOF;
+            }
+            break;
+        case GE_OP:
+        
+            if (valIsFound) {
+                currentBucketNum = GetPtr(pagehandle,i);
+                currentPagePos = i;
+                
+            }
+            // si la cle sur laquelle on est est deja superieure a la valeur voulue
+            else if (!valIsFound && i != header.nbCle+1) {
+                currentBucketNum = GetPtr(pagehandle,i);
+                currentPagePos = i;
+            }
+            else {
+                currentBucketNum = -1;
+                currentPagePos = -1;
+                return IX_EOF;
+            }
+        break;
+        case LE_OP:
+            if (valIsFound) {
+                newPageNum = GetPtr(pagehandle,i);
+                currentPagePos = i;
+            }
+            else if (!valIsFound && i != 1) {
+                currentBucketNum = GetPtr(pagehandle, i-1);
+                currentPagePos = i-1;
+            }
+            else if (!valIsFound && i == 1 && header.prevPage != -1) {
+                rc = pf_filehandle->UnpinPage(pageNum);
+                if (rc) return rc;
+                
+                rc = pf_filehandle->GetThisPage(header.prevPage, pf_pagehandle);
+                if (rc) return rc;
+                
+                PageNum prevPage;
+                rc = pf_pagehandle.GetPageNum(prevPage);
+                if (rc) return rc;
+
+                IX_NoeudHeader prevHeader;
+                char* pData3;
+                rc = pf_pagehandle.GetData(pData3);
+                if (rc) return rc;
+
+                memcpy(&prevHeader, pData3, sizeof(IX_NoeudHeader));
+                currentBucketNum = GetPtr(pagehandle,prevHeader.nbCle);
+                currentPagePos = prevHeader.nbCle;
+            }
+            else {
+                currentBucketNum = -1;
+                currentPagePos = -1;
+                return IX_EOF;
+            }
+        break;
+        
+        case GT_OP:
+            // s'il y a encore une cle a droite
+            if (valIsFound && i != header.nbCle)) { 
+                currentBucketNum = GetPtr(pagehandle,i+1);
+                currentPagePos = i+1;
+            }
+            // s'il n'y a plus de cle a droite, mais qu'il y a une page suivante
+            else if (valIsFound && i == header.nbCle && header.nextPage != -1) {
+                rc = pf_filehandle->UnpinPage(pageNum);
+                if (rc) return rc;
+                
+                rc = pf_filehandle->GetThisPage(header.nextPage, pf_pagehandle);
+                if (rc) return rc;
+                
+                PageNum nextPage;
+                rc = pf_pagehandle.GetPageNum(nextPage);
+                if (rc) return rc;
+
+                currentBucketNum = GetPtr(pagehandle,1);
+                currentPagePos = 1;
+                
+            }
+            // s'il n'y a plus de cle a droite ni de page suivante
+            else if (valIsFound) {
+                currentBucketNum = -1;
+                currentPagePos = -1;
+                return IX_EOF;
+            }
+            // si la cle sur laquelle on est est deja superieure a la valeur voulue
+            else if (!valIsFound && i != header.nbCle+1) {
+                currentBucketNum = GetPtr(pagehandle,i);
+                currentPagePos = i;
+            }
+            else {
+                currentBucketNum = -1;
+                currentPagePos = -1;
+                return IX_EOF;
+            }
+        break;
+        case LT_OP:
+            // s'il y a encore une cle a gauche
+            if (valIsFound && i != 1)) { 
+                currentBucketNum = GetPtr(pagehandle,i-1);
+                currentPagePos = i-1;
+            }
+            // s'il n'y a plus de cle a gauche, mais qu'il y a une page precedente
+            else if (valIsFound && i == 1 && header.prevPage != -1) {
+                rc = pf_filehandle->UnpinPage(pageNum);
+                if (rc) return rc;
+                
+                rc = pf_filehandle->GetThisPage(header.prevPage, pf_pagehandle);
+                if (rc) return rc;
+                
+                PageNum prevPage;
+                rc = pf_pagehandle.GetPageNum(prevPage);
+                if (rc) return rc;
+
+                IX_NoeudHeader prevHeader;
+                char* pData3;
+                rc = pf_pagehandle.GetData(pData3);
+                if (rc) return rc;
+
+                memcpy(&prevHeader, pData3, sizeof(IX_NoeudHeader));
+                currentBucketNum = GetPtr(pagehandle,prevHeader.nbCle);
+                currentPagePos = prevHeader.nbCle;
+                
+            }
+            // s'il n'y a pas de page precedente
+            else if (valIsFound) {
+                currentPagePos = -1;
+                currentBucketNum = -1;
+                return IX_EOF;
+            }
+            else if (!valIsFound && i != 1) {
+                currentBucketNum = GetPtr(pagehandle, i-1);
+                currentPagePos = i-1;
+            }
+            else if (!valIsFound && i == 1 && header.prevPage != -1) {
+                rc = pf_filehandle->UnpinPage(pageNum);
+                if (rc) return rc;
+                
+                rc = pf_filehandle->GetThisPage(header.prevPage, pf_pagehandle);
+                if (rc) return rc;
+                
+                PageNum prevPage;
+                rc = pf_pagehandle.GetPageNum(prevPage);
+                if (rc) return rc;
+
+                IX_NoeudHeader prevHeader;
+                char* pData3;
+                rc = pf_pagehandle.GetData(pData3);
+                if (rc) return rc;
+
+                memcpy(&prevHeader, pData3, sizeof(IX_NoeudHeader));
+                currentBucketNum = GetPtr(pagehandle,prevHeader.nbCle);
+                currentPagePos = prevHeader.nbCle;
+            }
+            else {
+                currentBucketNum = -1;
+                currentPagePos = -1;
+                return IX_EOF;
+            }
+            
+    }
+    
+    currentPageNum = currentBucketNum;
+    currentRIDPos = 1;
+    GetNextRIDinBucket(rid);
+    
     return 0;
 }
 
-RC IX_IndexScan::GetNextBucket(RID &rid){
+RC IX_IndexScan::GetNextBucket(RID &rid) {
+    PF_PageHandle pf_pagehandle;
+
+    pageNum = currentPageNum;
+    
+    rc = pf_filehandle->GetThisPage(pageNum, pf_pagehandle);
+    if (rc) return rc;
+    
+    //On récupère le header du noeud
+    IX_NoeudHeader header;
+    char* pData2;
+    rc = pf_pagehandle.GetData(pData2);
+    if (rc) return rc;
+
+    memcpy(&header, pData2, sizeof(IX_NoeudHeader));
+    
+    //On récupère tout de suite le numéro de la page courante
+    PageNum numPage;
+    rc = pf_pagehandle.GetPageNum(numPage);
+    if (rc) return rc;
+
+    //Si le noeud n'est pas une feuille, alors on cherche dans quelle feuille se trouve le rid cherche
+    int i;
+    void* pCle;
+    bool valIsFound = false;
+
+    //Si on est inférieur à la clé comparée, la valeur doit se trouver sur le pointeur précédent
+    for (i=1; i<=header.nbCle; i++){
+        pCle=GetCle(pagehandle, i);
+        
+        if (Compare(val, pCle) <= 0) {
+            if (Compare(val, pCle) == 0) {
+                valIsFound = true;
+            }
+            break;
+        }
+    }
+    
+    switch(op) : {
+        case NO_OP:
+        case GE_OP:
+        case GT_OP:
+            if (currentPagePos < header.nbCle) {
+                currentPagePos++;
+                currentBucketNum = GetPtr(pagehandle, currentPagePos);
+            }
+            else if (currentPagePos == header.nbCle && header.nextPage != -1) {
+                rc = pf_filehandle->UnpinPage(pageNum);
+                if (rc) return rc;
+                
+                rc = pf_filehandle->GetThisPage(header.nextPage, pf_pagehandle);
+                if (rc) return rc;
+                
+                PageNum nextPage;
+                rc = pf_pagehandle.GetPageNum(nextPage);
+                if (rc) return rc;
+
+                currentBucketNum = GetPtr(pagehandle,1);
+                currentPagePos = 1;
+            }
+            else {
+                return IX_EOF;
+            }
+        break;
+        case LE_OP:
+        case LT_OP:
+            if (currentPagePos > 1) {
+                currentPagePos--;
+                currentBucketNum = GetPtr(pagehandle, currentPagePos);
+            }
+            else if (currentPagePos == 1 && header.prevPage != -1) {
+                rc = pf_filehandle->UnpinPage(pageNum);
+                if (rc) return rc;
+                
+                rc = pf_filehandle->GetThisPage(header.prevPage, pf_pagehandle);
+                if (rc) return rc;
+                
+                PageNum nextPage;
+                rc = pf_pagehandle.GetPageNum(prevPage);
+                if (rc) return rc;
+
+                IX_NoeudHeader prevHeader;
+                char* pData3;
+                rc = pf_pagehandle.GetData(pData3);
+                if (rc) return rc;
+
+                memcpy(&prevHeader, pData3, sizeof(IX_NoeudHeader));
+                currentBucketNum = GetPtr(pagehandle, prevHeader.nbCle);
+                currentPagePos = prevHeader.nbCle;
+            }
+            else {
+                return IX_EOF;
+            }
+            break;
+        case EQ_OP:
+            return IX_EOF;
+            break;
+    }
+    
+    GetNextRIDinBucket(rid);
+    
     return 0;
 }
 
@@ -298,7 +615,7 @@ int IX_IndexScan::Compare(void *pData1, void *pData2) {
     }
 }
 
-PageNum IX_IndexScan::GetPtr(PF_PageHandle &pf_ph, int pos){
+PageNum IX_IndexScan::GetPtr(PF_PageHandle &pf_ph, int pos) {
 
     RC rc;
     char *pData;
@@ -314,7 +631,7 @@ PageNum IX_IndexScan::GetPtr(PF_PageHandle &pf_ph, int pos){
     return num;
 }
 
-void* IX_IndexScan::GetCle(PF_PageHandle &pf_ph, int pos){
+void* IX_IndexScan::GetCle(PF_PageHandle &pf_ph, int pos) {
 
     RC rc;
     char *pData;
