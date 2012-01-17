@@ -55,6 +55,7 @@ typedef struct ix_bucketheader {
 //
 class IX_IndexHandle {
     friend class IX_Manager;
+    friend class IX_IndexScan;
 
 public:
     IX_IndexHandle();
@@ -120,17 +121,21 @@ public:
     // Close index scan
     RC CloseScan();
     
-    RC GetFirstRID(RID &rid);
+    RC GetFirstRID(PageNum pageNum, RID &rid);
+
+    RC GetFirstBucket(PageNum pageNum, RID &rid);
     
     int Compare(void *pData1, void *pData2);
+    PageNum GetPtr(PF_PageHandle &pf_ph, int pos);
+    void* GetCle(PF_PageHandle &pf_ph, int pos);
     
 private:
     bool bScanOpen;
     
     IX_IndexHandle *ix_indexhandle;
-    PF_FileFandle *pf_filehandle;
+    PF_FileHandle *pf_filehandle;
 
-    RID *currentRID;
+    RID currentRID;
     int currentPageNum;
     int currentBucketNum;
     bool emptyBucket;

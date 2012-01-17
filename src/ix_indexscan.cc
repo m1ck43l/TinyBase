@@ -1,7 +1,12 @@
 #include "ix.h"
+#include <cstring>
+#include <string>
+#include <cstdlib>
+
+using namespace std;
 
 IX_IndexScan::IX_IndexScan() {
-    currentHeaderNode = NULL;
+
 }
 
 IX_IndexScan::~IX_IndexScan() {
@@ -26,7 +31,6 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, CompOp compOp, void
     //On initialise ensuite toutes les variables dont on aura besoin
     //dans la méthode GetNextEntry
     type = indexHandle.ix_fileheader.type;
-    length = indexHandle.ix_fileheader.length;
     taillePtr = indexHandle.ix_fileheader.taillePtr;
     tailleCle = indexHandle.ix_fileheader.tailleCle;
     op = compOp;
@@ -37,10 +41,8 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, CompOp compOp, void
     bScanOpen = true;
     
     // on cherche la premiere feuille/bucket/rid dont la valeur match avec val
-    rc = GetFirstRID(rid);
+    rc = GetFirstRID(indexHandle.ix_fileheader.numRacine, currentRID);
     if (rc) return rc;
-    
-    currentRID = rid;
     
 
 // produce RID of all records whose indexed attributes match to value
@@ -92,9 +94,74 @@ RC IX_IndexScan::CloseScan() {
 }
 
 // Find first RID that matches with val
-RC IX_IndexScan::GetFirstRID(&rid) {
-    
-    PF_PageHandle *pf_pagehandle;
+RC IX_IndexScan::GetFirstRID(PageNum pageNum, RID &rid) {
+
+    //Si il n'y a pas de racine dans l'index, on est déjà à IX_EOF
+    //IX_EOF peut être testé si on met le pageNum du RID à -1
+
+    if (pageNum == -1){
+        rid.SetPageNum(pageNum);
+        return 0;
+    }
+
+    //Sinon on a une racine et on cherche dans quelle feuille value doit se trouver
+    PF_PageHandle pagehandle;
+    RC rc;
+
+    rc = pf_filehandle->GetThisPage(pageNum, pagehandle);
+    if (rc) return rc;
+
+    //Si on est au niveau 0, c'est ici que l'on doit chercher le premier bucket
+
+    //On récupère le header
+    IX_NoeudHeader header;
+    char *pData;
+    rc = pagehandle.GetData(pData);
+    if (rc) return rc;
+
+    memcpy(&header, pData, sizeof(IX_NoeudHeader));
+
+    if (header.niveau == 0) {
+
+        rc = pf_filehandle->UnpinPage(pageNum);
+        if (rc) return rc;
+
+        return GetFirstBucket(pageNum, rid);
+    }
+    else {
+        //On doit trouver dans quel noeud propager la récursion
+        bool trouve = false;
+        int i;
+        void *pCle;
+
+        for (i=1; i<=header.nbCle; i++){
+            pCle=GetCle(pagehandle, i);
+
+            //Si on est inférieur à la clé comparée, la valeur doit se trouver sur le pointeur précédent
+            if (Compare(val, pCle)<0) {
+                trouve = true;
+                break;
+            }
+        }
+        if (trouve){
+            //On cherche la feuille à partir du nouveau noeud
+            PageNum nextNum = GetPtr(pagehandle,i);
+
+            rc = pf_filehandle->UnpinPage(pageNum);
+            if (rc) return rc;
+
+            return GetFirstRID(nextNum, rid);
+        }
+        else {
+            //On doit chercher dans le dernier pointeur
+            PageNum nextNum2 = GetPtr(pagehandle, header.nbCle+1);
+
+            rc = pf_filehandle->UnpinPage(pageNum);
+            if (rc) return rc;
+
+            return GetFirstRID(nextNum2, rid);
+        }
+    }
     
     return 0;
 }
@@ -133,4 +200,36 @@ int IX_IndexScan::Compare(void *pData1, void *pData2) {
             return s1.compare(s2);
         }
     }
+}
+
+PageNum IX_IndexScan::GetPtr(PF_PageHandle &pf_ph, int pos){
+
+    RC rc;
+    char *pData;
+    PageNum num;
+
+    rc = pf_ph.GetData(pData);
+    if (rc) IX_PrintError(rc);
+
+    pData += (sizeof(IX_NoeudHeader) + (pos-1)*(tailleCle + taillePtr));
+
+    memcpy(&num, pData, sizeof(PageNum));
+
+    return num;
+}
+
+void* IX_IndexScan::GetCle(PF_PageHandle &pf_ph, int pos){
+
+    RC rc;
+    char *pData;
+    void *pData2 = malloc(tailleCle);
+
+    rc = pf_ph.GetData(pData);
+    if (rc) IX_PrintError(rc);
+
+    pData += (sizeof(IX_NoeudHeader) + pos*taillePtr + (pos-1)*tailleCle);
+
+    memcpy(pData2, pData, tailleCle);
+
+    return pData2;
 }
