@@ -77,15 +77,13 @@ RC IX_IndexScan::GetNextEntry(RID &rid) {
     }
 
     //Sinon on modifie le rid en currentRID et on cherche le suivant
-    rc = rid.SetPageNum(pageRID);
-    if (rc) return rc;
+    rid.SetPageNum(pageRID);
     SlotNum slotRID;
 
     rc = currentRID.GetSlotNum(slotRID);
     if (rc) return rc;
 
-    rc = rid.SetSlotNum(slotRID);
-    if (rc) return rc;
+    rid.SetSlotNum(slotRID);
 
     return GetNextRID(currentRID);
 }
@@ -100,6 +98,75 @@ RC IX_IndexScan::GetNextRID(RID &rid){
         //Le bucket est donc vide, on cherche le prochain bucket valable
         return GetNextBucket(rid);
     }
+}
+
+RC IX_IndexScan::GetNextRIDinBucket(RID &rid){
+
+    //On récupère le pagehandle du bucket courant
+    RC rc;
+    PF_PageHandle pagehandle;
+
+    rc = pf_filehandle->GetThisPage(currentBucketNum, pagehandle);
+    if (rc) return rc;
+
+    //On récupère le header
+    IX_BucketHeader header;
+    char *pData;
+
+    rc = pagehandle.GetData(pData);
+    if (rc) return rc;
+
+    memcpy(&header, pData, sizeof(IX_BucketHeader));
+
+    if (currentRIDpos > header.nbRid){
+        //Cela signifie que l'on était sur le dernier rid du bucket
+        //On regarde si il y a un bucket de débordement
+        if(header.nextBuck == -1) {
+            //On était donc sur le tout dernier rid pour cette clé
+            rc = pf_filehandle->UnpinPage(currentBucketNum);
+            if (rc) return rc;
+
+            return GetNextBucket(rid);
+        }
+        else {
+            currentBucketNum = header.nextBuck;
+            currentRIDpos = 1;
+
+            rc = pf_filehandle->UnpinPage(currentBucketNum);
+            if (rc) return rc;
+
+            return GetNextRIDinBucket(rid);
+        }
+    }
+
+    else {
+        //On peut donc récupérer le bon rid
+        RID RIDres;
+
+        //On se décale du bon nombre de position
+        pData += sizeof(IX_BucketHeader) + (currentRIDpos-1)*sizeof(RID);
+
+        memcpy(&RIDres, pData, sizeof(RID));
+
+        //On met maintenant le bon rid dans celui cherché
+        PageNum numRID;
+        SlotNum slotRID;
+        rc = RIDres.GetPageNum(numRID);
+        if (rc) return rc;
+
+        rc = RIDres.GetSlotNum(slotRID);
+        if (rc) return rc;
+
+        rid.SetPageNum(numRID);
+        rid.SetSlotNum(slotRID);
+
+        //On se décale dans le bucket pour l'appel suivant
+        currentRIDpos++;
+
+        return pf_filehandle->UnpinPage(currentBucketNum);
+    }
+
+    return 0;
 }
 
 // Close index scan

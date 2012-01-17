@@ -139,8 +139,8 @@ private:
     PF_FileHandle *pf_filehandle;
 
     RID currentRID;
-    int currentPageNum;
-    int currentBucketNum;
+    PageNum currentPageNum;
+    PageNum currentBucketNum;
     bool emptyBucket;
     int currentRIDpos;
     
