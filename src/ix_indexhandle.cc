@@ -12,8 +12,9 @@ IX_IndexHandle::IX_IndexHandle() {
 }
 
 IX_IndexHandle::~IX_IndexHandle() {
-    if (pf_filehandle != NULL)
+    if (pf_filehandle != NULL){
         delete pf_filehandle;
+    }
 }
 
  // Insert a new index entry

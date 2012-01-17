@@ -528,7 +528,7 @@ RC Test2(void)
          (rc = ixm.OpenIndex(FILENAME, index, ih)) ||
 
          // ensure inserted entries are all there
-        // (rc = VerifyIntIndex(ih, 0, FEW_ENTRIES, TRUE)) ||
+         //(rc = VerifyIntIndex(ih, 0, FEW_ENTRIES, TRUE)) ||
 
          // ensure an entry not inserted is not there
          //(rc = VerifyIntIndex(ih, FEW_ENTRIES, 1, FALSE)) ||

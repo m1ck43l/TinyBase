@@ -27,12 +27,9 @@ typedef struct ix_fileheader {
 // IX_NoeudHeader
 //
 typedef struct ix_noeudHeader {
-    // Niveau sert à savoir si l'on est une feuille ou un noeud interne, niveau=0 correspond à une feuille
-    int niveau;
-    //Nombre maximum de pointeurs dans le noeud, il y aura donc nbMaxPtr-1 clés au max dans le noeud
-    int nbMaxPtr;
-    //Nombre de clé actuellement dans le noeud (il y a donc nbCle+2 pointeurs)
-    int nbCle;
+    int niveau; // Niveau sert à savoir si l'on est une feuille ou un noeud interne, niveau=0 correspond à une feuille
+    int nbMaxPtr;  //Nombre maximum de pointeurs dans le noeud, il y aura donc nbMaxPtr-1 clés au max dans le noeud
+    int nbCle;//Nombre de clé actuellement dans le noeud (il y a donc nbCle+2 pointeurs)
     PageNum pageMere;
     PageNum prevPage;
     PageNum nextPage;
@@ -135,7 +132,6 @@ public:
 private:
     bool bScanOpen;
     
-    IX_IndexHandle *ix_indexhandle;
     PF_FileHandle *pf_filehandle;
 
     RID currentRID;
