@@ -18,11 +18,9 @@
 //
 typedef struct ix_fileheader {
     int tailleCle;
-    int tailleRID;
     int taillePtr;
     PageNum numRacine;
     AttrType type;
-    int length;
 } IX_FileHeader;
 
 //
@@ -36,6 +34,8 @@ typedef struct ix_noeudHeader {
     //Nombre de clé actuellement dans le noeud (il y a donc nbCle+2 pointeurs)
     int nbCle;
     PageNum pageMere;
+    PageNum prevPage;
+    PageNum nextPage;
 } IX_NoeudHeader;
 
 //

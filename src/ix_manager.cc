@@ -32,11 +32,9 @@ RC IX_Manager::CreateIndex (const char *fileName, int indexNo, AttrType attrType
 
     // Creation de l'en-tete
     IX_FileHeader ix_fileheader;
-    ix_fileheader.tailleRID = sizeof(RID);
     ix_fileheader.tailleCle = attrLength;
     ix_fileheader.taillePtr = sizeof(PageNum);
     ix_fileheader.numRacine = -1;
-    ix_fileheader.length = attrLength;
     ix_fileheader.type = attrType;
 
     // TODO

@@ -31,6 +31,8 @@ IX_IndexHandle::~IX_IndexHandle() {
          header.niveau = 0;
          header.nbMaxPtr = ((PF_PAGE_SIZE+ix_fileheader.tailleCle)/(ix_fileheader.tailleCle + ix_fileheader.taillePtr));
          header.pageMere = -1;
+         header.prevPage = -1;
+         header.nextPage = -1;
 
          //On copie le header en mémoire
          char* pData2;
@@ -148,6 +150,15 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
             new_header.niveau = header.niveau;
             new_header.pageMere = header.pageMere;
 
+            //On change les liens entre les feuilles
+            PageNum newPageNum;
+            rc = new_pagehandle.GetPageNum(newPageNum);
+            if (rc) return rc;
+
+            new_header.prevPage = numPage;
+            new_header.nextPage = header.nextPage;
+            header.nextPage = newPageNum;
+
             char *pData3;
             rc = new_pagehandle.GetData(pData3);
             if (rc) return rc;
@@ -169,10 +180,6 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
 
             //On marque les pages en dirty
             rc = pf_filehandle->MarkDirty(numPage);
-            if (rc) return rc;
-
-            PageNum newPageNum;
-            rc = new_pagehandle.GetPageNum(newPageNum);
             if (rc) return rc;
 
             rc = pf_filehandle->MarkDirty(newPageNum);
@@ -220,6 +227,8 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
                 racHeader.nbMaxPtr = header.nbMaxPtr;
                 racHeader.niveau = header.niveau + 1;
                 racHeader.pageMere = -1;
+                racHeader.prevPage = -1;
+                racHeader.nextPage = -1;
 
                 char *pData5;
                 rc = newRacine.GetData(pData5);
@@ -556,13 +565,17 @@ RC IX_IndexHandle::InsererNoeudInterne(PageNum pageNum, void *pData, PageNum num
         new_header.niveau = header.niveau;
         new_header.pageMere = header.pageMere;
 
-        char *pData3;
-        rc = new_pagehandle.GetData(pData3);
-        if (rc) return rc;
-
-        //On récupère le numéro de la page
+        //On change le chainage des pages
         PageNum newNum;
         rc = new_pagehandle.GetPageNum(newNum);
+        if (rc) return rc;
+
+        new_header.prevPage = pageNum;
+        new_header.nextPage = header.nextPage;
+        header.nextPage = newNum;
+
+        char *pData3;
+        rc = new_pagehandle.GetData(pData3);
         if (rc) return rc;
 
         //On cherche à quelle place la clé doit se placer, pour savoir quelle clé remonter
@@ -680,6 +693,8 @@ RC IX_IndexHandle::InsererNoeudInterne(PageNum pageNum, void *pData, PageNum num
             header_rac.nbMaxPtr = header.nbMaxPtr;
             header_rac.niveau = header.niveau + 1;
             header_rac.pageMere = -1;
+            header_rac.prevPage = -1;
+            header_rac.nextPage = -1;
 
             //On le copie en mémoire
             char *pData4;
@@ -788,7 +803,7 @@ void IX_IndexHandle::SetCle(PF_PageHandle &pf_ph, int pos, void *pData){
     //On règle le décalage
     pData2 += (sizeof(IX_NoeudHeader) + pos*ix_fileheader.taillePtr + (pos-1)*ix_fileheader.tailleCle);
 
-    memcpy(pData2, pData, ix_fileheader.length);
+    memcpy(pData2, pData, ix_fileheader.tailleCle);
 }
 
 void IX_IndexHandle::SetPtr(PF_PageHandle &pf_ph, int pos, PageNum pageNum){
@@ -832,7 +847,7 @@ void* IX_IndexHandle::GetCle(PF_PageHandle &pf_ph, int pos){
 
     pData += (sizeof(IX_NoeudHeader) + pos*ix_fileheader.taillePtr + (pos-1)*ix_fileheader.tailleCle);
 
-    memcpy(pData2, pData, ix_fileheader.length);
+    memcpy(pData2, pData, ix_fileheader.tailleCle);
 
     return pData2;
 }
@@ -864,10 +879,10 @@ int IX_IndexHandle::Compare(void* pData1, void*pData2){
         case STRING : {
 
         string s1, s2;
-        s1.reserve(ix_fileheader.length);
-        s2.reserve(ix_fileheader.length);
-        memcpy(&s1, pData1, ix_fileheader.length);
-        memcpy(&s2, pData2, ix_fileheader.length);
+        s1.reserve(ix_fileheader.tailleCle);
+        s2.reserve(ix_fileheader.tailleCle);
+        memcpy(&s1, pData1, ix_fileheader.tailleCle);
+        memcpy(&s2, pData2, ix_fileheader.tailleCle);
 
         return s1.compare(s2);
     }
