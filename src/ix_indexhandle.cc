@@ -1,6 +1,7 @@
 #include "ix.h"
 #include <cstring>
 #include <string>
+#include <cstdlib>
 
 using namespace std;
 
@@ -276,7 +277,8 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
             if (rc) return rc;
         }
     }
-
+    //On ne devrait jamais arriver ici
+    return 0;
 }
 
 RC IX_IndexHandle::InsererFeuilleExiste(PageNum pageNum, void *pData, const RID &rid){
@@ -840,7 +842,7 @@ void* IX_IndexHandle::GetCle(PF_PageHandle &pf_ph, int pos){
 
     RC rc;
     char *pData;
-    void *pData2;
+    void *pData2 = malloc(ix_fileheader.tailleCle);
 
     rc = pf_ph.GetData(pData);
     if (rc) IX_PrintError(rc);
@@ -887,6 +889,7 @@ int IX_IndexHandle::Compare(void* pData1, void*pData2){
         return s1.compare(s2);
     }
     }
+    return 0;
 }
 
 // Delete a new index entry
