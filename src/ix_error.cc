@@ -19,7 +19,8 @@ static char *IX_WarnMsg[] = {
 
 static char *IX_ErrorMsg[] = {
     (char*)"Fail to create index file",
-    (char*)"Key doesn't exist in index"
+    (char*)"Key doesn't exist in index",
+    (char*)"CompOp error in searching first rid"
 };
 
 //

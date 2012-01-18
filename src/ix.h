@@ -190,5 +190,6 @@ void IX_PrintError(RC rc);
 
 #define IX_IDXCREATEFAIL        (START_IX_ERR - 0) // Fail to create index file
 #define IX_KEYNOTEXISTS         (START_IX_ERR - 1) // La clé devrait exister
-#define IX_LASTERROR            IX_KEYNOTEXISTS
+#define IX_ERROROP              (START_IX_ERR - 2) // La comparaison devrait déjà avoir été effectuée
+#define IX_LASTERROR            IX_ERROROP
 #endif
