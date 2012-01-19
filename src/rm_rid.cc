@@ -37,4 +37,17 @@ void RID::SetSlotNum(SlotNum &slotNum) {
     this->slotNum = slotNum;
 }
 
+bool RID::IsEqual(RID &rid){
+    PageNum page;
+    SlotNum slot;
+
+    GetPageNum(page);
+    GetSlotNum(slot);
+
+    if ((pageNum == page) && (slotNum == slot))
+        return true;
+    else
+        return false;
+}
+
 RID::~RID() {}
