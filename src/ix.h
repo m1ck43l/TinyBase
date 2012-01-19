@@ -53,7 +53,7 @@ typedef struct ix_bucketheader {
 class IX_IndexHandle {
     friend class IX_Manager;
     friend class IX_IndexScan;
-    
+
 public:
     IX_IndexHandle();
     ~IX_IndexHandle();
@@ -87,7 +87,15 @@ public:
     RC InsererFeuilleExiste(PageNum pageNum, void *pData, const RID &rid);
     RC InsererNoeudInterne(PageNum pageNum, void *pData, PageNum numPageGauche, PageNum numPageDroite);
     RC InsererBucket(PageNum pageNum, const RID &rid);
-    
+
+    // Methodes de suppression
+    RC DeleteEntryAtNode(PageNum pageNum, void* pData, const RID &rid);
+    RC DeleteEntryAtLeafNode(PageNum pageNum, void* pData, const RID &rid);
+    RC DeleteEntryAtIntlNode(PageNum pageNum, void* pData, const RID &rid);
+    RC DeleteEntryInBucket(PageNum pageNum, const RID &rid);
+    RC LinkTwoNodes(PageNum prev, PageNum next);
+	RC GetFirstRIDInBucket(PageNum pageNum, RID &rid);
+
     //Fonction qui change le lien de parenté dans l'arbe
     RC ChangerParent(PageNum pageNum, PageNum numParent);
 
@@ -117,21 +125,21 @@ public:
 
     // Close index scan
     RC CloseScan();
-    
+
     RC GetFirstRID(PageNum pageNum, RID &rid);
     RC GetNextRID(RID &rid);
     RC GetNextRIDinBucket(RID &rid);
-    
+
     RC GetFirstBucket(PageNum pageNum, RID &rid);
     RC GetNextBucket(RID &rid);
-    
+
     int Compare(void *pData1, void *pData2);
     PageNum GetPtr(PF_PageHandle &pf_ph, int pos);
     void* GetCle(PF_PageHandle &pf_ph, int pos);
-    
+
 private:
     bool bScanOpen;
-    
+
     PF_FileHandle *pf_filehandle;
 
     RID currentRID;
@@ -140,7 +148,7 @@ private:
     PageNum currentBucketNum;
     bool emptyBucket;
     int currentRIDpos;
-    
+
     //On crée une copie de tous les paramètres pour les utilise
     void *val; //Contiendra la valeur que l'on devra comparer
                //C'est un void* car on ne connait pas encore le type de value
@@ -186,10 +194,14 @@ void IX_PrintError(RC rc);
 #define IX_FILEOPEN             (START_IX_WARN + 0) // File already opened
 #define IX_FILECLOSED           (START_IX_WARN + 1) // File already closed
 #define IX_EOF                  (START_IX_WARN + 2) // End of file
-#define IX_LASTWARN             IX_EOF
+#define IX_NOTFOUND             (START_IX_WARN + 3) // Key not found
+#define IX_EMPTYBUCKET          (START_IX_WARN + 4) // empty bucket
+#define IX_EMPTYLEAF            (START_IX_WARN + 5) // empty leaf
+#define IX_LASTWARN             IX_EMPTYLEAF
 
 #define IX_IDXCREATEFAIL        (START_IX_ERR - 0) // Fail to create index file
 #define IX_KEYNOTEXISTS         (START_IX_ERR - 1) // La clé devrait exister
 #define IX_ERROROP              (START_IX_ERR - 2) // La comparaison devrait déjà avoir été effectuée
+#define IX_NOKEY                (START_IX_ERR - 3) // Pas de cle fournie
 #define IX_LASTERROR            IX_ERROROP
 #endif

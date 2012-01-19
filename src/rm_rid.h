@@ -39,7 +39,7 @@ public:
     RC GetSlotNum(SlotNum &slotNum) const;         // Return slot number
     void SetPageNum(PageNum &pageNum);
     void SetSlotNum(PageNum &slotNum);
-    bool IsEqual(RID &rid);
+    bool IsEqual(const RID &rid);
 
 private:
     bool bIsValid;

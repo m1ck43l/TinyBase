@@ -930,8 +930,366 @@ int IX_IndexHandle::Compare(void* pData1, void*pData2){
 
 // Delete a new index entry
 RC IX_IndexHandle::DeleteEntry(void *pData, const RID &rid) {
+    RC rc;
+
+    if(pData == NULL) {
+        return IX_NOKEY;
+    }
+
+    if(ix_fileheader.numRacine == -1) {
+        return IX_NOTFOUND;
+    }
+
+    rc = DeleteEntryAtNode(ix_fileheader.numRacine, pData, rid);
+
+    return rc;
+}
+
+RC IX_IndexHandle::DeleteEntryAtNode(PageNum pageNum, void* pData, const RID &rid) {
+    RC rc;
+    int i;
+    void* pCle;
+
+    PF_PageHandle pf_pagehandle;
+    rc = pf_filehandle->GetThisPage(pageNum, pf_pagehandle);
+    if (rc) return rc;
+
+    //On récupère le header du noeud
+    IX_NoeudHeader header;
+    char* pData2;
+    rc = pf_pagehandle.GetData(pData2);
+    if (rc) return rc;
+
+    memcpy(&header, pData2, sizeof(IX_NoeudHeader));
+
+    //Si le noeud n'est pas une feuille, alors on cherche dans quelle feuille l'insérer
+    if (header.niveau != 0) {
+        bool trouve = false;
+        for (i=1; i<=header.nbCle; i++){
+            pCle=GetCle(pf_pagehandle, i);
+
+            int res = Compare(pData, pCle);
+            free(pCle);
+            pCle = NULL;
+
+            //Si on est inférieur à la clé comparée, l'entrée doit être supprimee sur le pointeur précédent
+            if (res<0) {
+                trouve = true;
+                break;
+            }
+        }
+        //On peut unpin la page
+
+        PageNum nextNode;
+        if (trouve){ //On est donc plus petit qu'une clé
+            nextNode = GetPtr(pf_pagehandle, i);
+        } else {
+            nextNode = GetPtr(pf_pagehandle, header.nbCle+1);
+        }
+
+        rc = pf_filehandle->UnpinPage(nextNode);
+        if (rc) return rc;
+
+        rc = DeleteEntryAtNode(nextNode, pData, rid);
+        if (rc) return rc;
+
+        // Supprimer le noeud interne si necessaire
+        rc = DeleteEntryAtIntlNode(pageNum, pData, rid);
+    } else {
+        rc = DeleteEntryAtLeafNode(pageNum, pData, rid);
+    }
 
     return 0;
+}
+
+RC IX_IndexHandle::DeleteEntryAtLeafNode(PageNum pageNum, void* pData, const RID &rid) {
+    RC rc = 0;
+    int i = 0, pos = 0;
+
+    PF_PageHandle pf_pagehandle;
+    rc = pf_filehandle->GetThisPage(pageNum, pf_pagehandle);
+    if (rc) return rc;
+
+    //On récupère le header du noeud
+    IX_NoeudHeader header;
+    char* pData2;
+    rc = pf_pagehandle.GetData(pData2);
+    if (rc) return rc;
+
+    memcpy(&header, pData2, sizeof(IX_NoeudHeader));
+
+    bool trouve = false;
+    void* pCle;
+    while ( (i<=header.nbCle) && !trouve ){
+        pCle = GetCle(pf_pagehandle, i);
+        if(Compare(pData, pCle) == 0) {
+            //On est donc sur la bonne clé
+            trouve = true;
+            pos = i;
+        }
+        free(pCle);
+        pCle = NULL;
+        i++;
+    }
+    if (pos == 0) return IX_KEYNOTEXISTS; //Ne devrait jamais arriver
+
+    PageNum nextPage = GetPtr(pf_pagehandle, pos);
+    rc = DeleteEntryInBucket(nextPage, rid);
+
+    if(rc == IX_EMPTYBUCKET) {
+        if(header.nbCle > 1) {
+            // Il reste encore des cles dans la feuille donc on supprime juste la cle actuelle
+            for(i=pos;i<header.nbCle;i++) {
+                void* cle = GetCle(pf_pagehandle, i+1);
+                SetCle(pf_pagehandle, i, cle);
+                free(cle);
+                cle = NULL;
+            }
+            header.nbCle--;
+
+            // on reecrit le header
+            memcpy(pData2, &header, sizeof(IX_NoeudHeader));
+
+            rc = pf_filehandle->MarkDirty(pageNum);
+            if(rc) return rc;
+
+            rc = pf_filehandle->UnpinPage(pageNum);
+            if(rc) return rc;
+        }
+        else {
+            // La cle est la derniere de la feuille
+            rc = LinkTwoNodes(header.prevPage, header.nextPage);
+            if(rc) return rc;
+
+            rc = pf_filehandle->UnpinPage(pageNum);
+            if(rc) return rc;
+
+            rc = pf_filehandle->DisposePage(pageNum);
+            if(rc) return rc;
+
+            rc = IX_EMPTYLEAF;
+        }
+    } else {
+        rc = pf_filehandle->UnpinPage(pageNum);
+        if(rc) return rc;
+    }
+
+    return rc;
+}
+
+RC IX_IndexHandle::DeleteEntryAtIntlNode(PageNum pageNum, void* pData, const RID &rid) {
+    RC rc = 0;
+
+
+
+    return rc;
+}
+
+RC IX_IndexHandle::LinkTwoNodes(PageNum prev, PageNum next) {
+    RC rc = 0;
+    PF_PageHandle pf_pagehandle;
+    IX_NoeudHeader header;
+    char* pData;
+
+    if(prev != -1) {
+        rc = pf_filehandle->GetThisPage(prev, pf_pagehandle);
+        if (rc) return rc;
+
+        //On récupère le header du noeud
+        rc = pf_pagehandle.GetData(pData);
+        if (rc) return rc;
+
+        memcpy(&header, pData, sizeof(IX_NoeudHeader));
+
+        // Mise a jour des liens
+        header.nextPage = next;
+        memcpy(pData, &header, sizeof(IX_NoeudHeader));
+
+        rc = pf_filehandle->MarkDirty(prev);
+        if (rc) return rc;
+
+        rc = pf_filehandle->UnpinPage(prev);
+        if(rc) return rc;
+    }
+
+    if(next != -1) {
+        rc = pf_filehandle->GetThisPage(next, pf_pagehandle);
+        if (rc) return rc;
+
+        //On récupère le header du noeud
+        rc = pf_pagehandle.GetData(pData);
+        if (rc) return rc;
+
+        memcpy(&header, pData, sizeof(IX_NoeudHeader));
+
+        // Mise a jour des liens
+        header.prevPage = prev;
+        memcpy(pData, &header, sizeof(IX_NoeudHeader));
+
+        rc = pf_filehandle->MarkDirty(next);
+        if (rc) return rc;
+
+        rc = pf_filehandle->UnpinPage(next);
+        if(rc) return rc;
+    }
+
+    return rc;
+}
+
+RC IX_IndexHandle::DeleteEntryInBucket(PageNum pageNum, const RID &rid) {
+	RC rc;
+    PF_PageHandle pagehandle;
+
+    rc = pf_filehandle->GetThisPage(pageNum, pagehandle);
+    if (rc) return rc;
+
+    RID currentRID;
+    int i;
+    bool trouve;
+
+    //On récupère le header du bucket
+    IX_BucketHeader header;
+    char *pData;
+
+    rc = pagehandle.GetData(pData);
+    if (rc) return rc;
+
+    memcpy(&header, pData, sizeof(IX_BucketHeader));
+
+    //On décale déjà le pointeur vers le 1er RID
+    pData += sizeof(IX_BucketHeader);
+
+    for (i=1; i<=header.nbRid; i++){
+
+        //On met dans le currentRID le RID de la position i du bucket
+        memcpy(&currentRID,pData,sizeof(RID));
+
+        if(currentRID.IsEqual(rid)) {
+            //On a donc trouvé la position du RID dans le bucket
+            trouve = true;
+            break;
+        }
+        //Sinon on incrémente le pointeur
+        pData += sizeof(RID);
+    }
+
+    //Si on ne l'a pas trouvé, on le supprime du bucket suivant s'il existe
+    if (!trouve){
+        if (header.nextBuck == -1) {
+            //On n'a donc pas trouvé le RID correspondant
+            rc = pf_filehandle->UnpinPage(pageNum);
+            if (rc) return rc;
+
+            return IX_NOTFOUND;
+        }
+        else {
+            //Il existe donc un autre bucket
+            rc = pf_filehandle->UnpinPage(pageNum);
+            if (rc) return rc;
+
+            return DeleteEntryInBucket(header.nextBuck,rid);
+        }
+    }
+    else {
+        //Le RID se trouve dans ce bucket à la position i
+        if (i!=header.nbRid) {
+            //On met le dernier à sa place et on décrémente le nombre de RID
+            //Je remet pData au début de la page pour ne pas se tromper dans la position
+            rc = pagehandle.GetData(pData);
+            if (rc) return rc;
+
+            char *pData2 = pData;
+
+            pData += (sizeof(IX_BucketHeader) + (i-1)*sizeof(RID));
+            pData2 += (sizeof(IX_BucketHeader) + (header.nbRid-1)*sizeof(RID));
+
+            memcpy(pData,pData2,sizeof(RID));
+
+            header.nbRid--;
+        }
+        else {
+            //On a juste à décrémenter le nbRID
+            header.nbRid--;
+        }
+
+        if (header.nbRid == 0) {
+            //C'était donc le dernier RID du bucket, on peut supprimer la page
+            rc = pf_filehandle->UnpinPage(pageNum);
+            if (rc) return rc;
+
+            rc = pf_filehandle->DisposePage(pageNum);
+            if (rc) return rc;
+
+            return IX_EMPTYBUCKET;
+        }
+        //Il reste donc à cet endroit des RID dans le bucket
+        else if (header.nextBuck == -1) {
+            //Il n'y a pas de bucket de débordement
+            //On peut tout réécrire en mémoire et sortir
+            rc = pagehandle.GetData(pData);
+            if (rc) return rc;
+
+            memcpy(pData, &header, sizeof(IX_BucketHeader));
+
+            rc = pf_filehandle->MarkDirty(pageNum);
+            if (rc) return rc;
+
+            rc = pf_filehandle->UnpinPage(pageNum);
+            if (rc) return rc;
+
+            return 0;
+        }
+        else {
+            //Il existe un bucket de débordement
+            //Il faut supprimer le dernier RID du bucket suivant pour le mettre dans le bucket courant
+            rc = GetFirstRIDInBucket(header.nextBuck,currentRID);
+            if (rc) return rc;
+
+            rc = pagehandle.GetData(pData);
+            if (rc) return rc;
+
+            pData += (sizeof(IX_BucketHeader) +(header.nbMax-1)*sizeof(RID));
+            memcpy(pData, &currentRID, sizeof(RID));
+
+            rc = DeleteEntryInBucket(header.nextBuck, currentRID);
+            if (rc == IX_EMPTYBUCKET) {
+                header.nextBuck = -1;
+            }
+            else if (rc) return rc;
+
+            //On a fini de supprimer le RID on peut sortir
+            rc = pagehandle.GetData(pData);
+            if (rc) return rc;
+
+            memcpy(pData, &header,sizeof(IX_BucketHeader));
+
+            rc = pf_filehandle->MarkDirty(pageNum);
+            if (rc) return rc;
+
+            rc = pf_filehandle->UnpinPage(pageNum);
+            if (rc) return rc;
+
+            return 0;
+        }
+    }
+}
+
+RC IX_IndexHandle::GetFirstRIDInBucket(PageNum pageNum, RID &rid){
+    RC rc;
+    PF_PageHandle pagehandle;
+
+    rc = pf_filehandle->GetThisPage(pageNum, pagehandle);
+    if (rc) return rc;
+
+    char *pData;
+    rc = pagehandle.GetData(pData);
+    if (rc) return rc;
+
+    pData += sizeof(IX_BucketHeader);
+
+    memcpy(&rid, pData, sizeof(RID));
+
+    return pf_filehandle->UnpinPage(pageNum);
 }
 
 // Force index files to disk

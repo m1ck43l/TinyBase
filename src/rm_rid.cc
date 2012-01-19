@@ -37,7 +37,7 @@ void RID::SetSlotNum(SlotNum &slotNum) {
     this->slotNum = slotNum;
 }
 
-bool RID::IsEqual(RID &rid){
+bool RID::IsEqual(const RID &rid){
     PageNum page;
     SlotNum slot;
 
