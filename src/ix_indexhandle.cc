@@ -946,7 +946,7 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID &rid) {
 }
 
 RC IX_IndexHandle::DeleteEntryAtNode(PageNum pageNum, void* pData, const RID &rid) {
-    RC rc;
+    RC rc = 0;
     int i;
     void* pCle;
 
@@ -993,13 +993,15 @@ RC IX_IndexHandle::DeleteEntryAtNode(PageNum pageNum, void* pData, const RID &ri
         rc = DeleteEntryAtNode(nextNode, pData, rid);
         if (rc) return rc;
 
-        // Supprimer le noeud interne si necessaire
-        rc = DeleteEntryAtIntlNode(pageNum, pData, rid);
+        if (rc == IX_EMPTYNODE) {
+            // Supprimer le noeud interne si necd1essaire
+            rc = DeleteEntryAtIntlNode(pageNum, nextNode);
+        }
     } else {
         rc = DeleteEntryAtLeafNode(pageNum, pData, rid);
     }
 
-    return 0;
+    return rc;
 }
 
 RC IX_IndexHandle::DeleteEntryAtLeafNode(PageNum pageNum, void* pData, const RID &rid) {
@@ -1042,6 +1044,7 @@ RC IX_IndexHandle::DeleteEntryAtLeafNode(PageNum pageNum, void* pData, const RID
             for(i=pos;i<header.nbCle;i++) {
                 void* cle = GetCle(pf_pagehandle, i+1);
                 SetCle(pf_pagehandle, i, cle);
+                SetPtr(pf_pagehandle, i, GetPtr(pf_pagehandle, i+1));
                 free(cle);
                 cle = NULL;
             }
@@ -1067,7 +1070,7 @@ RC IX_IndexHandle::DeleteEntryAtLeafNode(PageNum pageNum, void* pData, const RID
             rc = pf_filehandle->DisposePage(pageNum);
             if(rc) return rc;
 
-            rc = IX_EMPTYLEAF;
+            rc = IX_EMPTYNODE;
         }
     } else {
         rc = pf_filehandle->UnpinPage(pageNum);
@@ -1077,11 +1080,55 @@ RC IX_IndexHandle::DeleteEntryAtLeafNode(PageNum pageNum, void* pData, const RID
     return rc;
 }
 
-RC IX_IndexHandle::DeleteEntryAtIntlNode(PageNum pageNum, void* pData, const RID &rid) {
+RC IX_IndexHandle::DeleteEntryAtIntlNode(PageNum pageNum, PageNum nodeToDelete) {
     RC rc = 0;
+    char * pData;
+    int i = 0;
 
+    PF_PageHandle pf_pagehandle;
+    rc = pf_filehandle->GetThisPage(pageNum, pf_pagehandle);
+    if (rc) return rc;
 
+    IX_NoeudHeader header;
+    //On récupère le header du noeud
+    rc = pf_pagehandle.GetData(pData);
+    if (rc) return rc;
 
+    memcpy(&header, pData, sizeof(IX_NoeudHeader));
+
+    if(header.nbCle == 1) {
+        rc = pf_filehandle->UnpinPage(pageNum);
+        if(rc) return rc;
+
+        rc = pf_filehandle->DisposePage(pageNum);
+        if(rc) return rc;
+
+        return 0;
+    }
+
+    bool trouve = false;
+    for(i=1; i<=header.nbCle; i++) {
+        if(nodeToDelete == GetPtr(pf_pagehandle, i)) {
+            trouve = true;
+        }
+        if (trouve && i < header.nbCle) {
+            void* pCle = GetCle(pf_pagehandle, i+1);
+            SetCle(pf_pagehandle, i, pCle);
+            SetPtr(pf_pagehandle, i, GetPtr(pf_pagehandle, i+1));
+            free(pCle);
+            pCle = NULL;
+        }
+    }
+    header.nbCle--;
+    memcpy(pData, &header, sizeof(IX_NoeudHeader));
+
+    rc = pf_filehandle->MarkDirty(pageNum);
+    if(rc) return rc;
+
+    rc = pf_filehandle->UnpinPage(pageNum);
+    if(rc) return rc;
+
+    rc = IX_EMPTYNODE;
     return rc;
 }
 

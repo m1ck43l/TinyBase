@@ -33,7 +33,7 @@ typedef struct ix_noeudHeader {
     PageNum pageMere;
     PageNum prevPage;
     PageNum nextPage;
-    
+
 } IX_NoeudHeader;
 
 //
@@ -91,7 +91,7 @@ public:
     // Methodes de suppression
     RC DeleteEntryAtNode(PageNum pageNum, void* pData, const RID &rid);
     RC DeleteEntryAtLeafNode(PageNum pageNum, void* pData, const RID &rid);
-    RC DeleteEntryAtIntlNode(PageNum pageNum, void* pData, const RID &rid);
+    RC DeleteEntryAtIntlNode(PageNum pageNum, PageNum nodeToDelete);
     RC DeleteEntryInBucket(PageNum pageNum, const RID &rid);
     RC LinkTwoNodes(PageNum prev, PageNum next);
 	RC GetFirstRIDInBucket(PageNum pageNum, RID &rid);
@@ -196,8 +196,8 @@ void IX_PrintError(RC rc);
 #define IX_EOF                  (START_IX_WARN + 2) // End of file
 #define IX_NOTFOUND             (START_IX_WARN + 3) // Key not found
 #define IX_EMPTYBUCKET          (START_IX_WARN + 4) // empty bucket
-#define IX_EMPTYLEAF            (START_IX_WARN + 5) // empty leaf
-#define IX_LASTWARN             IX_EMPTYLEAF
+#define IX_EMPTYNODE            (START_IX_WARN + 5) // empty leaf
+#define IX_LASTWARN             IX_EMPTYNODE
 
 #define IX_IDXCREATEFAIL        (START_IX_ERR - 0) // Fail to create index file
 #define IX_KEYNOTEXISTS         (START_IX_ERR - 1) // La clé devrait exister
