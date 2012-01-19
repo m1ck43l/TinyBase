@@ -3,6 +3,7 @@
 #include <string>
 #include <cstdlib>
 #include <iostream>
+#include <cstdio>
 
 using namespace std;
 
@@ -127,6 +128,7 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
     else { //On est au niveau d'une feuille
 
         //Si la clé existe déjà dans la feuille, c'est plus simple à insérer
+
         if (CleExiste(pf_pagehandle, header, pData)) {
             rc = pf_filehandle->UnpinPage(numPage);
             if (rc) return rc;
@@ -917,14 +919,10 @@ int IX_IndexHandle::Compare(void* pData1, void*pData2){
         break;
     }
         case STRING : {
+        char *s1 = (char*) pData1;
+        char *s2 = (char*) pData2;
 
-        string s1, s2;
-        s1.reserve(ix_fileheader.tailleCle);
-        s2.reserve(ix_fileheader.tailleCle);
-        memcpy(&s1, pData1, ix_fileheader.tailleCle);
-        memcpy(&s2, pData2, ix_fileheader.tailleCle);
-
-        return s1.compare(s2);
+        return strncmp(s1,s2,ix_fileheader.tailleCle);
     }
     }
     return 0;

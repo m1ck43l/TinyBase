@@ -3,6 +3,7 @@
 #include <string>
 #include <cstdlib>
 #include <iostream>
+#include <cstdio>
 
 using namespace std;
 
@@ -698,6 +699,7 @@ RC IX_IndexScan::GetNextBucket(RID &rid) {
 }
 
 int IX_IndexScan::Compare(void *pData1, void *pData2) {
+
     switch(type){
 
         case INT : {
@@ -721,14 +723,9 @@ int IX_IndexScan::Compare(void *pData1, void *pData2) {
             break;
         }
         case STRING : {
-
-            string s1, s2;
-            s1.reserve(length);
-            s2.reserve(length);
-            memcpy(&s1, pData1, length);
-            memcpy(&s2, pData2, length);
-
-            return s1.compare(s2);
+            char *s1 = (char*) pData1;
+            char *s2 = (char*) pData2;
+            return strncmp(s1,s2,tailleCle);
         }
     }
     //On ne doit pas arriver jusqu'ici
