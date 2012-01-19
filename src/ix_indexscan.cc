@@ -659,7 +659,7 @@ RC IX_IndexScan::GetNextBucket(RID &rid) {
             IX_NoeudHeader prevHeader;
             char* pData3;
 
-            rc = pf_pagehandle.GetData(pData3);
+            rc = next_handle3.GetData(pData3);
             if (rc) return rc;
 
             memcpy(&prevHeader, pData3, sizeof(IX_NoeudHeader));

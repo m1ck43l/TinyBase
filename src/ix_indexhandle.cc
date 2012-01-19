@@ -1008,7 +1008,7 @@ RC IX_IndexHandle::DeleteEntryAtNode(PageNum pageNum, void* pData, const RID &ri
 
 RC IX_IndexHandle::DeleteEntryAtLeafNode(PageNum pageNum, void* pData, const RID &rid) {
     RC rc = 0;
-    int i = 0, pos = 0;
+    int i = 1, pos = 0;
 
     PF_PageHandle pf_pagehandle;
     rc = pf_filehandle->GetThisPage(pageNum, pf_pagehandle);
