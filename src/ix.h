@@ -95,6 +95,10 @@ public:
     RC DeleteEntryInBucket(PageNum pageNum, const RID &rid);
     RC LinkTwoNodes(PageNum prev, PageNum next);
 	RC GetFirstRIDInBucket(PageNum pageNum, RID &rid);
+<<<<<<< HEAD
+    RC FindNewRoot(PageNum pageNum);
+=======
+>>>>>>> 1c25d0f1f902bca407bc341109235ba259523ab8
 
     //Fonction qui change le lien de parenté dans l'arbe
     RC ChangerParent(PageNum pageNum, PageNum numParent);
@@ -203,5 +207,9 @@ void IX_PrintError(RC rc);
 #define IX_KEYNOTEXISTS         (START_IX_ERR - 1) // La clé devrait exister
 #define IX_ERROROP              (START_IX_ERR - 2) // La comparaison devrait déjà avoir été effectuée
 #define IX_NOKEY                (START_IX_ERR - 3) // Pas de cle fournie
+<<<<<<< HEAD
+#define IX_LASTERROR            IX_NOKEY
+=======
 #define IX_LASTERROR            IX_ERROROP
+>>>>>>> 1c25d0f1f902bca407bc341109235ba259523ab8
 #endif
