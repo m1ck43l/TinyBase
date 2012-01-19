@@ -1035,13 +1035,20 @@ RC IX_IndexHandle::DeleteEntryAtLeafNode(PageNum pageNum, void* pData, const RID
         pCle = NULL;
         i++;
     }
-    if (pos == 0 && header.prevPage == -1) {
-        return IX_KEYNOTEXISTS; //Ne devrait jamais arriver
-    } else if (pos == 0) {
+    if (pos == 0) {
+    if (Compare(pData, GetCle(pf_pagehandle, 1)) < 0 && header.prevPage != -1) {
         rc = pf_filehandle->UnpinPage(pageNum);
         if(rc) return rc;
 
         return DeleteEntryAtLeafNode(header.prevPage, pData, rid);
+    } else if (Compare(pData, GetCle(pf_pagehandle, header.nbCle)) > 0 && header.nextPage != -1) {
+        rc = pf_filehandle->UnpinPage(pageNum);
+        if(rc) return rc;
+
+        return DeleteEntryAtLeafNode(header.nextPage, pData, rid);
+    } else {
+        return IX_KEYNOTEXISTS; //Ne devrait jamais arriver
+    }
     }
 
     PageNum nextPage = GetPtr(pf_pagehandle, pos);
