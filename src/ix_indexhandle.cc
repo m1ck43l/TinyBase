@@ -370,6 +370,8 @@ RC IX_IndexHandle::InsererBucket(PageNum pageNum, const RID &rid){
     RC rc;
     //On récupère d'abord la page
     PF_PageHandle pagehandle;
+    int i;
+    RID currentRID;
 
     rc = pf_filehandle->GetThisPage(pageNum, pagehandle);
     if (rc) return rc;
@@ -382,6 +384,15 @@ RC IX_IndexHandle::InsererBucket(PageNum pageNum, const RID &rid){
     if (rc) return rc;
 
     memcpy(&header, pData, sizeof(IX_BucketHeader));
+    pData+=sizeof(IX_BucketHeader);
+
+    //On vérifie si le RID n'existe pas déjà
+    for (i = 0; i < header.nbRid; i++) {
+        memcpy(&currentRID, pData, sizeof(RID));
+        if (currentRID.IsEqual(rid))
+            return IX_KEYALREADYEXISTS;
+        pData += sizeof(RID);
+    }
 
     if (header.nbRid == header.nbMax){
         //On regarde s'il existe déjà un bucket de débordement
@@ -431,6 +442,9 @@ RC IX_IndexHandle::InsererBucket(PageNum pageNum, const RID &rid){
             return InsererBucket(numNewBuck, rid);
         }
     }
+
+    rc = pagehandle.GetData(pData);
+    if (rc) return rc;
 
     //On décale le pointeur
     pData += (sizeof(IX_BucketHeader) + header.nbRid*sizeof(RID));

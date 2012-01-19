@@ -198,7 +198,8 @@ void IX_PrintError(RC rc);
 #define IX_NOTFOUND             (START_IX_WARN + 3) // Key not found
 #define IX_EMPTYBUCKET          (START_IX_WARN + 4) // empty bucket
 #define IX_EMPTYNODE            (START_IX_WARN + 5) // empty leaf
-#define IX_LASTWARN             IX_EMPTYNODE
+#define IX_KEYALREADYEXISTS     (START_IX_WARN + 6) // key already in index
+#define IX_LASTWARN             IX_KEYALREADYEXISTS
 
 #define IX_IDXCREATEFAIL        (START_IX_ERR - 0) // Fail to create index file
 #define IX_KEYNOTEXISTS         (START_IX_ERR - 1) // La clé devrait exister

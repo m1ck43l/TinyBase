@@ -16,7 +16,8 @@ static char *IX_WarnMsg[] = {
     (char*)"end of file",
     (char*)"Key not found",
     (char*)"empty bucket",
-    (char*)"empty leaf"
+    (char*)"empty leaf",
+    (char*)"key already in index"
 };
 
 static char *IX_ErrorMsg[] = {
