@@ -18,19 +18,19 @@ IX_IndexScan::~IX_IndexScan() {
 
 // Open index scan
 RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, CompOp compOp, void *value, ClientHint  pinHint) {
-    
+
     RC rc;
     // initialize condtion-based scan over entries
     // compop possible values     NO_OP, EQ_OP, NE_OP, LT_OP, GT_OP, LE_OP, GE_OP
-    
+
     // check if scan already open
     if (bScanOpen == true)
         return IX_FILEOPEN;
-    
+
     // check if compop is OK
     if (compOp < NO_OP || compOp > GE_OP)
         return IX_IDXCREATEFAIL;
-        
+
     //On initialise ensuite toutes les variables dont on aura besoin
     //dans la méthode GetNextEntry
     type = indexHandle.ix_fileheader.type;
@@ -39,14 +39,14 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, CompOp compOp, void
     op = compOp;
     val = value;
     currentRIDpos = 0;
-    
+
     //On copie le filehandle
-    PF_FileHandle filehandle;
-    filehandle = *indexHandle.pf_filehandle;
-    pf_filehandle = new PF_FileHandle(filehandle);
-        
+    //PF_FileHandle filehandle;
+    //filehandle = *indexHandle.pf_filehandle;
+    pf_filehandle = new PF_FileHandle(*indexHandle.pf_filehandle);
+
     bScanOpen = true;
-    
+
     // on cherche la premiere feuille/bucket/rid dont la valeur match avec val
     rc = GetFirstRID(indexHandle.ix_fileheader.numRacine, currentRID);
     if (rc) return rc;
@@ -60,9 +60,6 @@ RC IX_IndexScan::CloseScan() {
     if (bScanOpen == false)
         return IX_FILECLOSED;
 
-    if (pf_filehandle != NULL)
-        delete pf_filehandle;
-
     bScanOpen = false;
 
     return 0;
@@ -71,17 +68,17 @@ RC IX_IndexScan::CloseScan() {
 // Get the next matching entry return IX_EOF if no more matching
 // entries.
 RC IX_IndexScan::GetNextEntry(RID &rid) {
-    
+
     RC rc;
-    
+
     // set rid to be the next record during the scan
     // return IX_EOF if no index entries
-    
+
     // check if scan is open
-    
+
     if (bScanOpen == false)
         return IX_FILECLOSED;
-        
+
     //On vérifie si le currentRID est valable
     if (!currentRID.bIsValid) {
         return IX_EOF;
@@ -288,7 +285,7 @@ RC IX_IndexScan::GetFirstRID(PageNum pageNum, RID &rid) {
             return GetFirstRID(nextNum2, rid);
         }
     }
-    
+
     return 0;
 }
 
@@ -301,7 +298,7 @@ RC IX_IndexScan::GetFirstBucket(PageNum pageNum, RID &rid) {
 
     rc = pf_filehandle->GetThisPage(pageNum, pagehandle);
     if (rc) return rc;
-    
+
     //On récupère le header de la feuille
     IX_NoeudHeader header;
     char* pData2;
@@ -318,7 +315,7 @@ RC IX_IndexScan::GetFirstBucket(PageNum pageNum, RID &rid) {
     //Si on est inférieur à la clé comparée, la valeur doit se trouver sur le pointeur précédent
     for (i=1; i<=header.nbCle; i++){
         pCle=GetCle(pagehandle, i);
-        
+
         if (Compare(val, pCle) <= 0) {
             if (Compare(val, pCle) == 0) {
                 valIsFound = true;
@@ -386,7 +383,7 @@ RC IX_IndexScan::GetFirstBucket(PageNum pageNum, RID &rid) {
             else if (!valIsFound && (i == 1) && (header.prevPage != -1)) {
                 rc = pf_filehandle->UnpinPage(pageNum);
                 if (rc) return rc;
-                
+
                 return GetFirstBucket(header.prevPage, rid);
             }
             else {
@@ -399,7 +396,7 @@ RC IX_IndexScan::GetFirstBucket(PageNum pageNum, RID &rid) {
             }
             break;
         }
-        
+
         case GT_OP: {
             // s'il y a encore une cle a droite
             if (valIsFound && (i != header.nbCle)) {
@@ -466,7 +463,7 @@ RC IX_IndexScan::GetFirstBucket(PageNum pageNum, RID &rid) {
 
                     return 0;
                 }
-                
+
             }
 
             else if (!valIsFound && i != 1) {
@@ -504,10 +501,10 @@ RC IX_IndexScan::GetNextBucket(RID &rid) {
     PF_PageHandle pf_pagehandle;
     RC rc;
     PageNum pageNum = currentPageNum;
-    
+
     rc = pf_filehandle->GetThisPage(pageNum, pf_pagehandle);
     if (rc) return rc;
-    
+
     //On récupère le header du noeud
     IX_NoeudHeader header;
     char* pData2;
