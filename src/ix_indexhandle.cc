@@ -32,7 +32,7 @@ IX_IndexHandle::~IX_IndexHandle() {
          IX_NoeudHeader header;
          header.nbCle = 0;
          header.niveau = 0;
-         header.nbMaxPtr = ((PF_PAGE_SIZE+ix_fileheader.tailleCle)/(ix_fileheader.tailleCle + ix_fileheader.taillePtr));
+         header.nbMaxPtr = ((PF_PAGE_SIZE-sizeof(IX_NoeudHeader)+ix_fileheader.tailleCle)/(ix_fileheader.tailleCle + ix_fileheader.taillePtr));
          header.pageMere = -1;
          header.prevPage = -1;
          header.nextPage = -1;
@@ -92,8 +92,12 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
         for (i=1; i<=header.nbCle; i++){
             pCle=GetCle(pf_pagehandle, i);
 
+            int res = Compare(pData, pCle);
+            free(pCle);
+            pCle = NULL;
+
             //Si on est inférieur à la clé comparée, l'entrée doit être ajoutée sur le pointeur précédent
-            if (Compare(pData, pCle)<0) {
+            if (res<0) {
                 trouve = true;
                 break;
             }
@@ -169,9 +173,9 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
             int max = header.nbMaxPtr;
             int ordre = max/2, i;
 
-            for (i=(ordre+1); i<=max; i++){
-                SetCle(new_pagehandle, i - (ordre+1), GetCle(pf_pagehandle, i));
-                SetPtr(new_pagehandle, i - (ordre+1), GetPtr(pf_pagehandle, i));
+            for (i=(ordre+1); i<max; i++){
+                SetCle(new_pagehandle, i - (ordre), GetCle(pf_pagehandle, i));
+                SetPtr(new_pagehandle, i - (ordre), GetPtr(pf_pagehandle, i));
                 new_header.nbCle++;
                 header.nbCle--;
             }
@@ -209,6 +213,28 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
                 rc = InsererFeuille(newPageNum, pData, rid);
                 if (rc) return rc;
             }
+
+            //On vient d'ajouter une cle donc il faut recharger les headers
+            rc = pf_filehandle->GetThisPage(numPage, pf_pagehandle);
+            if (rc) return rc;
+
+            rc = pf_filehandle->GetThisPage(newPageNum, new_pagehandle);
+            if (rc) return rc;
+
+            rc = pf_pagehandle.GetData(pData2);
+            if (rc) return rc;
+
+            rc = new_pagehandle.GetData(pData3);
+            if (rc) return rc;
+
+            memcpy(&new_header, pData3, sizeof(IX_NoeudHeader));
+            memcpy(&header, pData2, sizeof(IX_NoeudHeader));
+
+            rc = pf_filehandle->UnpinPage(numPage);
+            if (rc) return rc;
+
+            rc = pf_filehandle->UnpinPage(newPageNum);
+            if (rc) return rc;
 
             //On reprend les handles car on les avait enlever pour faire la récursion dans insérer
             rc = pf_filehandle->GetThisPage(newPageNum, new_pagehandle);
@@ -254,6 +280,7 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
 
                 header.pageMere = racNum;
                 new_header.pageMere = racNum;
+                ix_fileheader.numRacine = racNum;
 
                 //On a changé les header, on les remet en mémoire et on marque dirty
                 memcpy(pData3, &new_header, sizeof(IX_NoeudHeader));
@@ -280,10 +307,11 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
                 rc = InsererNoeudInterne(racNum,pData4, numPage, newPageNum);
                 if (rc) return rc;
             }
-
-            //On remonte la 1ere clé de la nouvelle feuille
-            rc = InsererNoeudInterne(header.pageMere, pData4, numPage, newPageNum);
-            if (rc) return rc;
+            else {
+                //On remonte la 1ere clé de la nouvelle feuille
+                rc = InsererNoeudInterne(header.pageMere, pData4, numPage, newPageNum);
+                if (rc) return rc;
+            }
         }
     }
     //On ne devrait jamais arriver ici
@@ -558,7 +586,7 @@ RC IX_IndexHandle::InsererNoeudInterne(PageNum pageNum, void *pData, PageNum num
         rc = pf_filehandle->MarkDirty(pageNum);
         if (rc) return rc;
 
-        return pf_filehandle->MarkDirty(pageNum);
+        return pf_filehandle->UnpinPage(pageNum);
     }
 
     else {//Sinon, on doit splitter le noeud
