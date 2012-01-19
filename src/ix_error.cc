@@ -14,13 +14,16 @@ static char *IX_WarnMsg[] = {
     (char*)"file is already open",
     (char*)"file is already closed",
     (char*)"end of file",
-    (char*)"last warn before eof"
+    (char*)"Key not found",
+    (char*)"empty bucket",
+    (char*)"empty leaf"
 };
 
 static char *IX_ErrorMsg[] = {
     (char*)"Fail to create index file",
     (char*)"Key doesn't exist in index",
-    (char*)"CompOp error in searching first rid"
+    (char*)"CompOp error in searching first rid",
+    (char*)"pas de cle"
 };
 
 //
