@@ -23,6 +23,16 @@ RC IX_Manager::CreateIndex (const char *fileName, int indexNo, AttrType attrType
     if (attrLength + (int)sizeof(RID) > PF_PAGE_SIZE)
         return IX_IDXCREATEFAIL;
 
+    // Sanity check, no check for string
+    switch(attrType) {
+    	case INT:
+    		if (attrLength != sizeof(int)) return IX_IDXCREATEFAIL;
+    		break;
+    	case FLOAT:
+    		if (attrLength != sizeof(float)) return IX_IDXCREATEFAIL;
+    		break;
+    }
+
     // Creation de la page
     rc = pf_manager.CreateFile(oss.str().c_str());
     if (rc) return rc;
