@@ -553,6 +553,7 @@ RC IX_IndexScan::GetNextBucket(RID &rid) {
             currentPagePos++;
             currentBucketNum = GetPtr(pf_pagehandle,currentPagePos);
         }
+        break;
     }
     case NE_OP : {
         //On a juste à prendre le bucket suivant

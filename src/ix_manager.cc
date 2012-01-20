@@ -84,8 +84,6 @@ RC IX_Manager::CreateIndex (const char *fileName, int indexNo, AttrType attrType
     rc = pf_manager.CloseFile(pf_filehandle);
 
     return rc;
-
-    return 0;
 }
 
 RC IX_Manager::DestroyIndex(const char* fileName, int indexNo) {

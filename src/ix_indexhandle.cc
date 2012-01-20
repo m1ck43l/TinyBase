@@ -160,6 +160,28 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
             rc = new_pagehandle.GetPageNum(newPageNum);
             if (rc) return rc;
 
+            // Il faut aussi mettre à jour le prevPage du header.nextPage pour conserver la cohérence
+            if (header.nextPage != -1) {
+				PF_PageHandle nextPageHandle;
+				rc = pf_filehandle->GetThisPage(header.nextPage, nextPageHandle);
+				if(rc) return rc;
+
+				IX_NoeudHeader headerNext;
+				char* pDataNext;
+				rc = nextPageHandle.GetData(pDataNext);
+				if (rc) return rc;
+
+				memcpy(&headerNext, pDataNext, sizeof(IX_NoeudHeader));
+				headerNext.prevPage = newPageNum;
+				memcpy(pDataNext, &headerNext, sizeof(IX_NoeudHeader));
+
+				rc = pf_filehandle->MarkDirty(header.nextPage);
+				if (rc) return rc;
+
+				rc = pf_filehandle->UnpinPage(header.nextPage);
+				if (rc) return rc;
+            }
+
             new_header.prevPage = numPage;
             new_header.nextPage = header.nextPage;
             header.nextPage = newPageNum;
