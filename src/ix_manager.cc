@@ -3,6 +3,7 @@
 #include <cstring>
 #include <iostream>
 #include <sstream>
+#include <fstream>
 
 using namespace std;
 
@@ -89,6 +90,16 @@ RC IX_Manager::CreateIndex (const char *fileName, int indexNo, AttrType attrType
 RC IX_Manager::DestroyIndex(const char* fileName, int indexNo) {
 	ostringstream oss;
 	oss << fileName << "." << indexNo;
+
+    //On vérifie si le fichier existe et est lisible sur le disque
+    ifstream fichier;
+    fichier.open(oss.str().c_str(), ifstream::in);
+    if (fichier.fail()) {
+        fichier.close();
+        return IX_NOINDEX;
+    }
+    fichier.close();
+
     return pf_manager.DestroyFile(oss.str().c_str());
 }
 
