@@ -12,10 +12,7 @@ IX_IndexScan::IX_IndexScan() {
     pf_filehandle = NULL;
 }
 
-IX_IndexScan::~IX_IndexScan() {
-    if (pf_filehandle != NULL)
-        delete pf_filehandle;
-}
+IX_IndexScan::~IX_IndexScan() {}
 
 // Open index scan
 RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, CompOp compOp, void *value, ClientHint  pinHint) {
@@ -42,8 +39,6 @@ RC IX_IndexScan::OpenScan(const IX_IndexHandle &indexHandle, CompOp compOp, void
     currentRIDpos = 0;
 
     //On copie le filehandle
-    //PF_FileHandle filehandle;
-    //filehandle = *indexHandle.pf_filehandle;
     pf_filehandle = new PF_FileHandle(*indexHandle.pf_filehandle);
 
     bScanOpen = true;
@@ -60,6 +55,9 @@ RC IX_IndexScan::CloseScan() {
 
     if (bScanOpen == false)
         return IX_FILECLOSED;
+
+    if (pf_filehandle != NULL)
+    	delete pf_filehandle;
 
     bScanOpen = false;
 
@@ -174,6 +172,7 @@ RC IX_IndexScan::GetFirstRID(PageNum pageNum, RID &rid) {
 
     //Si il n'y a pas de racine dans l'index, on est déjà à IX_EOF
     //IX_EOF peut être testé si on met le pageNum du RID à -1
+	void* pCle = NULL;
 
     if (pageNum == -1){
         rid.SetPageNum(pageNum);
@@ -203,8 +202,13 @@ RC IX_IndexScan::GetFirstRID(PageNum pageNum, RID &rid) {
         //On prend donc le premier bucket
         if ((op == NO_OP) || (op == NE_OP)){
             if (op == NE_OP) {
+            	pCle = GetCle(pagehandle, 1);
+            	int res = Compare(val, pCle);
+            	free(pCle);
+            	pCle = NULL;
+
                 //On vérifie que ce n'est pas la première valeur de la feuille
-                if (Compare(val, GetCle(pagehandle,1)) == 0) {
+                if (res == 0) {
                     if (header.nbCle > 2) {
                         currentBucketNum = GetPtr(pagehandle, 2);
                         currentRIDpos = 1;
@@ -256,13 +260,15 @@ RC IX_IndexScan::GetFirstRID(PageNum pageNum, RID &rid) {
         //On doit trouver dans quel noeud propager la récursion
         bool trouve = false;
         int i;
-        void *pCle;
 
         for (i=1; i<=header.nbCle; i++){
             pCle=GetCle(pagehandle, i);
+            int res = Compare(val, pCle);
+            free(pCle);
+            pCle = NULL;
 
             //Si on est inférieur à la clé comparée, la valeur doit se trouver sur le pointeur précédent
-            if (Compare(val, pCle)<0) {
+            if (res<0) {
                 trouve = true;
                 break;
             }
@@ -316,9 +322,12 @@ RC IX_IndexScan::GetFirstBucket(PageNum pageNum, RID &rid) {
     //Si on est inférieur à la clé comparée, la valeur doit se trouver sur le pointeur précédent
     for (i=1; i<=header.nbCle; i++){
         pCle=GetCle(pagehandle, i);
+        int res = Compare(val, pCle);
+        free(pCle);
+        pCle = NULL;
 
-        if (Compare(val, pCle) <= 0) {
-            if (Compare(val, pCle) == 0) {
+        if (res <= 0) {
+            if (res == 0) {
                 valIsFound = true;
             }
             break;
@@ -554,7 +563,8 @@ RC IX_IndexScan::GetNextBucket(RID &rid) {
                 rc = pf_filehandle->GetThisPage(header.nextPage, next_pagehandle2);
                 if (rc) return rc;
 
-                if (Compare(val,GetCle(next_pagehandle2,1)) == 0) {
+                void* pCle = GetCle(next_pagehandle2,1);
+                if (Compare(val,pCle) == 0) {
                     currentBucketNum = GetPtr(next_pagehandle2, 2);
                     currentPagePos = 2;
                     currentPageNum = header.nextPage;
@@ -569,6 +579,8 @@ RC IX_IndexScan::GetNextBucket(RID &rid) {
                     rc = pf_filehandle->UnpinPage(header.nextPage);
                     if (rc) return rc;
                 }
+                free(pCle);
+                pCle = NULL;
             }
             else{
                 rid.bIsValid = false;
@@ -580,12 +592,14 @@ RC IX_IndexScan::GetNextBucket(RID &rid) {
             }
         }
         else {//Il reste des clés dans la feuille courante
+        	void* pCle = GetCle(pf_pagehandle, currentPagePos);
+
             currentPagePos++;
-            if ( (Compare(val, GetCle(pf_pagehandle, currentPagePos)) == 0) && (currentPagePos!=header.nbCle)) {
+            if ( (Compare(val, pCle) == 0) && (currentPagePos!=header.nbCle)) {
                 currentPagePos++;
                 currentBucketNum = GetPtr(pf_pagehandle,currentPagePos);
             }
-            else if ((Compare(val, GetCle(pf_pagehandle, currentPagePos)) == 0) && (currentPagePos==header.nbCle)){
+            else if ((Compare(val, pCle) == 0) && (currentPagePos==header.nbCle)){
                 //On doit regarder s'il reste des pages
                 if (header.nextPage == -1){
                     rid.bIsValid = false;
@@ -611,6 +625,9 @@ RC IX_IndexScan::GetNextBucket(RID &rid) {
             else {
                 currentBucketNum = GetPtr(pf_pagehandle,currentPagePos);
             }
+
+            free(pCle);
+            pCle = NULL;
         }
         break;
     }

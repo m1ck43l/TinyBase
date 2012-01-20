@@ -8,13 +8,15 @@ using namespace std;
 
 IX_Manager::IX_Manager(PF_Manager &pfm) : pf_manager(pfm) {}
 
-IX_Manager::~IX_Manager() {}
+IX_Manager::~IX_Manager() {
+
+}
 
 RC IX_Manager::CreateIndex (const char *fileName, int indexNo, AttrType attrType, int attrLength) {
     RC rc;
 
-    const char* realFilename;
-    ComputeFilename(fileName, indexNo, realFilename);
+    ostringstream oss;
+    oss << fileName << "." << indexNo;
 
     // On va stocker des couples (attr,RID)
     // on verifie qu'un couple n'est pas plus grand qu'une page
@@ -22,12 +24,12 @@ RC IX_Manager::CreateIndex (const char *fileName, int indexNo, AttrType attrType
         return IX_IDXCREATEFAIL;
 
     // Creation de la page
-    rc = pf_manager.CreateFile(realFilename);
+    rc = pf_manager.CreateFile(oss.str().c_str());
     if (rc) return rc;
 
     // Ouverture du fichier pour creer l'en-tete
     PF_FileHandle pf_filehandle;
-    rc = pf_manager.OpenFile(realFilename, pf_filehandle);
+    rc = pf_manager.OpenFile(oss.str().c_str(), pf_filehandle);
     if (rc) return rc;
 
     // Creation de l'en-tete
@@ -77,24 +79,23 @@ RC IX_Manager::CreateIndex (const char *fileName, int indexNo, AttrType attrType
 }
 
 RC IX_Manager::DestroyIndex(const char* fileName, int indexNo) {
-    const char* realFilename;
-    ComputeFilename(fileName, indexNo, realFilename);
-
-    return pf_manager.DestroyFile(realFilename);
+	ostringstream oss;
+	oss << fileName << "." << indexNo;
+    return pf_manager.DestroyFile(oss.str().c_str());
 }
 
 RC IX_Manager::OpenIndex(const char* fileName, int indexNo, IX_IndexHandle &indexHandle) {
-    const char* realFilename;
-    ComputeFilename(fileName, indexNo, realFilename);
-
     RC rc;
+
+    ostringstream oss;
+    oss << fileName << "." << indexNo;
 
     // on verifie si le handle est deja ouvert
     if (indexHandle.bFileOpen) return IX_FILEOPEN;
 
     // ouverture du fichier
     PF_FileHandle pf_filehandle;
-    rc = pf_manager.OpenFile(realFilename, pf_filehandle);
+    rc = pf_manager.OpenFile(oss.str().c_str(), pf_filehandle);
     if (rc) return rc;
 
     // le fichier est ouvert
@@ -150,16 +151,8 @@ RC IX_Manager::CloseIndex(IX_IndexHandle &indexHandle) {
     // le fichier est clos
     indexHandle.bFileOpen = false;
 
-    return 0;
-}
+    if(indexHandle.pf_filehandle != NULL)
+    	delete(indexHandle.pf_filehandle);
 
-RC IX_Manager::ComputeFilename(const char* fileName, int indexNo, const char*& computedFilename) {
-    ostringstream oss;
-
-    oss << fileName;
-    oss << ".";
-    oss << indexNo;
-
-    computedFilename = oss.str().c_str();
     return 0;
 }

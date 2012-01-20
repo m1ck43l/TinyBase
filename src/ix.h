@@ -70,6 +70,7 @@ public:
     //Insère récursivement l'entrée dans la page pageNum
     RC Inserer(PageNum pageNum, void *pData, const RID &rid);
 
+private:
     //Fonctions permettant d'obtenir ou de modifier la clé ou le pointeur d'un noeud à la position pos
     void SetCle(PF_PageHandle &pf_ph, int pos, void *pData);
     void SetPtr(PF_PageHandle &pf_ph, int pos, PageNum pageNum);
@@ -100,7 +101,6 @@ public:
     //Fonction qui change le lien de parenté dans l'arbe
     RC ChangerParent(PageNum pageNum, PageNum numParent);
 
-private:
     bool bFileOpen;
     PF_FileHandle* pf_filehandle;
     IX_FileHeader ix_fileheader;
@@ -183,8 +183,6 @@ public:
     RC CloseIndex(IX_IndexHandle &indexHandle);
 private:
     PF_Manager& pf_manager;
-
-    RC ComputeFilename(const char*, int, const char*&);
 };
 
 //

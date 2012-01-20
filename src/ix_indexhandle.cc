@@ -13,9 +13,6 @@ IX_IndexHandle::IX_IndexHandle() {
 }
 
 IX_IndexHandle::~IX_IndexHandle() {
-    if (pf_filehandle != NULL){
-        delete pf_filehandle;
-    }
 }
 
  // Insert a new index entry
@@ -67,6 +64,8 @@ IX_IndexHandle::~IX_IndexHandle() {
 RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
 
     RC rc;
+    void* pCle = NULL;
+
     //On prend d'abord un pagehandle du noeud où l'on veut insérer
     PF_PageHandle pf_pagehandle;
     rc = pf_filehandle->GetThisPage(pageNum, pf_pagehandle);
@@ -88,11 +87,9 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
     //Si le noeud n'est pas une feuille, alors on cherche dans quelle feuille l'insérer
     if (header.niveau != 0) {
         int i;
-        void* pCle;
         bool trouve = false;
         for (i=1; i<=header.nbCle; i++){
             pCle=GetCle(pf_pagehandle, i);
-
             int res = Compare(pData, pCle);
             free(pCle);
             pCle = NULL;
@@ -176,7 +173,11 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
             int ordre = max/2, i;
 
             for (i=(ordre+1); i<max; i++){
-                SetCle(new_pagehandle, i - (ordre), GetCle(pf_pagehandle, i));
+            	pCle = GetCle(pf_pagehandle, i);
+                SetCle(new_pagehandle, i - (ordre), pCle);
+                free(pCle);
+                pCle = NULL;
+
                 SetPtr(new_pagehandle, i - (ordre), GetPtr(pf_pagehandle, i));
                 new_header.nbCle++;
                 header.nbCle--;
@@ -194,7 +195,8 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
             if (rc) return rc;
 
             //On regarde dans laquelle des 2 feuilles insérer la clé
-            if (Compare(pData, GetCle(new_pagehandle, 1))<0) {
+            pCle = GetCle(new_pagehandle, 1);
+            if (Compare(pData, pCle)<0) {
                 //La clé a insérer est plus petite que la première de la nouvelle feuille
                 rc = pf_filehandle->UnpinPage(numPage);
                 if (rc) return rc;
@@ -215,6 +217,8 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
                 rc = InsererFeuille(newPageNum, pData, rid);
                 if (rc) return rc;
             }
+            free(pCle);
+            pCle = NULL;
 
             //On vient d'ajouter une cle donc il faut recharger les headers
             rc = pf_filehandle->GetThisPage(numPage, pf_pagehandle);
@@ -314,6 +318,9 @@ RC IX_IndexHandle::Inserer(PageNum pageNum, void *pData, const RID &rid){
                 rc = InsererNoeudInterne(header.pageMere, pData4, numPage, newPageNum);
                 if (rc) return rc;
             }
+
+            free(pData4);
+            pData4 = NULL;
         }
     }
     //On ne devrait jamais arriver ici
@@ -344,13 +351,16 @@ RC IX_IndexHandle::InsererFeuilleExiste(PageNum pageNum, void *pData, const RID 
     bool trouve = false;
 
     while ( (i<=header.nbCle) && !trouve ){
-
-        if(Compare(pData, GetCle(pagehandle, i)) == 0) {
+    	void* pCle = GetCle(pagehandle, i);
+        if(Compare(pData, pCle) == 0) {
             //On est donc sur la bonne clé
             trouve = true;
             pos = i;
         }
         i++;
+
+        free(pCle);
+        pCle = NULL;
     }
 
     if (pos == 0) return IX_KEYNOTEXISTS; //Ne devrait jamais arriver
@@ -469,6 +479,7 @@ RC IX_IndexHandle::InsererFeuille(PageNum pageNum, void *pData, const RID &rid){
 
     //On récupère la page
     RC rc;
+    void* pCle = NULL;
     PF_PageHandle pagehandle;
 
     rc = pf_filehandle->GetThisPage(pageNum, pagehandle);
@@ -487,7 +498,11 @@ RC IX_IndexHandle::InsererFeuille(PageNum pageNum, void *pData, const RID &rid){
     int pos = 0, i;
 
     for (i=1; i<=header.nbCle; i++){
-        if (Compare(pData, GetCle(pagehandle, i)) < 0){
+    	pCle = GetCle(pagehandle, i);
+    	int res = Compare(pData, pCle);
+    	free(pCle);
+    	pCle = NULL;
+        if (res < 0){
             //Cela veut dire qu'avant nous étions supérieur, et plus maintenant
             break;
         }
@@ -497,7 +512,11 @@ RC IX_IndexHandle::InsererFeuille(PageNum pageNum, void *pData, const RID &rid){
 
     //On déplace maintenant toutes les clés et les pointeurs qui sont après la nouvelle position
     for (i=header.nbCle; i>=pos; i--){
-        SetCle(pagehandle, i+1, GetCle(pagehandle, i));
+    	pCle = GetCle(pagehandle, i);
+        SetCle(pagehandle, i+1, pCle);
+        free(pCle);
+        pCle = NULL;
+
         SetPtr(pagehandle, i+1, GetPtr(pagehandle, i));
     }
 
@@ -552,6 +571,7 @@ RC IX_IndexHandle::InsererFeuille(PageNum pageNum, void *pData, const RID &rid){
 RC IX_IndexHandle::InsererNoeudInterne(PageNum pageNum, void *pData, PageNum numPageGauche, PageNum numPageDroite){
 
     RC rc;
+    void * pCle = NULL;
     PF_PageHandle pagehandle;
 
     //On récupère le noeud
@@ -574,7 +594,12 @@ RC IX_IndexHandle::InsererNoeudInterne(PageNum pageNum, void *pData, PageNum num
         int pos = 0, i;
 
         for (i=1; i<=header.nbCle; i++){
-            if (Compare(pData, GetCle(pagehandle, i)) < 0){
+        	pCle = GetCle(pagehandle, i);
+        	int res = Compare(pData, pCle);
+        	free(pCle);
+        	pCle = NULL;
+
+            if (res < 0){
                 //Cela veut dire qu'avant nous étions supérieur, et plus maintenant
                 break;
             }
@@ -583,9 +608,14 @@ RC IX_IndexHandle::InsererNoeudInterne(PageNum pageNum, void *pData, PageNum num
 
         //On décale toutes les clés supérieures
         for (i=header.nbCle; i>=pos; i--){
+        	pCle = GetCle(pagehandle, i);
+
             //On décale les pointeurs à droite des clés cette fois
             SetPtr(pagehandle, i+2, GetPtr(pagehandle, i+1));
-            SetCle(pagehandle, i+1, GetCle(pagehandle, i));
+            SetCle(pagehandle, i+1, pCle);
+
+            free(pCle);
+			pCle = NULL;
         }
 
         //On insère la nouvelle valeur à la position pos
@@ -639,13 +669,18 @@ RC IX_IndexHandle::InsererNoeudInterne(PageNum pageNum, void *pData, PageNum num
         int ordre = max/2, i, pos=0;
 
         for (i=1; i<=header.nbCle; i++){
-            if (Compare(pData, GetCle(pagehandle, i)) < 0){
+        	pCle = GetCle(pagehandle, i);
+        	int res = Compare(pData, pCle);
+        	free(pCle);
+        	pCle = NULL;
+
+            if (res < 0){
                 //Cela veut dire qu'avant nous étions supérieur, et plus maintenant
                 break;
             }
         }
         pos = i;
-        void *pCleARemonter;
+        void *pCleARemonter = NULL;
 
         if(pos<=ordre){
             //La clé sera insérée dans le noeud de gauche, la clé à remonter sera celle à la position ordre
@@ -653,7 +688,11 @@ RC IX_IndexHandle::InsererNoeudInterne(PageNum pageNum, void *pData, PageNum num
 
             //On insère toutes les clés dans le nouveau noeud
             for (i=ordre+1; i<header.nbMaxPtr; i++){
-                SetCle(new_pagehandle, i-ordre ,GetCle(pagehandle,i));
+            	pCle = GetCle(pagehandle, i);
+                SetCle(new_pagehandle, i-ordre , pCle);
+                free(pCle);
+                pCle = NULL;
+
                 SetPtr(new_pagehandle, i-ordre, GetPtr(pagehandle,i));
                 new_header.nbCle++;
                 header.nbCle--;
@@ -667,7 +706,11 @@ RC IX_IndexHandle::InsererNoeudInterne(PageNum pageNum, void *pData, PageNum num
 
             //On décale maintenant tous les pointeurs du noeud de gauche pour insérer la nouvelle clé
             for (i=ordre; i>=pos; i--){
-                SetCle(pagehandle, i+1, GetCle(pagehandle, i));
+            	pCle = GetCle(pagehandle, i);
+                SetCle(pagehandle, i+1, pCle);
+                free(pCle);
+                pCle = NULL;
+
                 SetPtr(pagehandle, i+2, GetPtr(pagehandle, i+1));
             }
             SetCle(pagehandle,pos,pData);
@@ -681,7 +724,11 @@ RC IX_IndexHandle::InsererNoeudInterne(PageNum pageNum, void *pData, PageNum num
 
             //On insère les bonnes clés dans le nouveau noeud
             for (i=ordre+1; i<header.nbMaxPtr; i++){
-                SetCle(new_pagehandle, i-ordre, GetCle(pagehandle,i));
+            	pCle = GetCle(pagehandle, i);
+                SetCle(new_pagehandle, i-ordre, pCle);
+                free(pCle);
+                pCle = NULL;
+
                 SetPtr(new_pagehandle, i-ordre+1, GetPtr(pagehandle, i+1));
                 header.nbCle--;
                 new_header.nbCle++;
@@ -700,7 +747,11 @@ RC IX_IndexHandle::InsererNoeudInterne(PageNum pageNum, void *pData, PageNum num
 
             //On ajoute d'abord les clés plus petites
             for (i=ordre+2; i<=pos; i++) {
-                SetCle(new_pagehandle, i-ordre-1, GetCle(pagehandle,i));
+            	pCle = GetCle(pagehandle, i);
+                SetCle(new_pagehandle, i-ordre-1, pCle);
+                free(pCle);
+                pCle = NULL;
+
                 SetPtr(new_pagehandle, i-ordre-1, GetPtr(pagehandle,i));
                 header.nbCle--;
                 new_header.nbCle++;
@@ -716,7 +767,11 @@ RC IX_IndexHandle::InsererNoeudInterne(PageNum pageNum, void *pData, PageNum num
 
             //On fini de recopier les clés
             for (i=pos;i<header.nbMaxPtr;i++){
-                SetCle(new_pagehandle, pos-ordre, GetCle(pagehandle, i));
+            	pCle = GetCle(pagehandle, i);
+                SetCle(new_pagehandle, pos-ordre, pCle);
+                free(pCle);
+                pCle = NULL;
+
                 SetPtr(new_pagehandle, pos-ordre+1, GetPtr(pagehandle, i+1));
                 header.nbCle--;
                 new_header.nbCle++;
@@ -779,7 +834,7 @@ RC IX_IndexHandle::InsererNoeudInterne(PageNum pageNum, void *pData, PageNum num
             rc = pf_filehandle->UnpinPage(newNumRac);
             if (rc) return rc;
 
-            return InsererNoeudInterne(newNumRac, pCleARemonter, pageNum, newNum);
+            rc = InsererNoeudInterne(newNumRac, pCleARemonter, pageNum, newNum);
         }
 
         else {
@@ -800,8 +855,13 @@ RC IX_IndexHandle::InsererNoeudInterne(PageNum pageNum, void *pData, PageNum num
             rc = pf_filehandle->UnpinPage(newNum);
             if (rc) return rc;
 
-            return InsererNoeudInterne(header.pageMere, pCleARemonter, pageNum, newNum);
+            rc = InsererNoeudInterne(header.pageMere, pCleARemonter, pageNum, newNum);
         }
+
+        free(pCleARemonter);
+        pCleARemonter = NULL;
+
+        return rc;
 
     }
 
@@ -840,10 +900,14 @@ RC IX_IndexHandle::ChangerParent(PageNum pageNum, PageNum numParent){
 bool IX_IndexHandle::CleExiste(PF_PageHandle &pf_ph, IX_NoeudHeader header, void *pData){
     int i=1;
     bool trouve = false;
+    void* pCle = NULL;
 
     while( (i<=header.nbCle) && (!trouve)){
-        if (Compare(GetCle(pf_ph,i), pData) == 0) trouve = true;
+    	pCle = GetCle(pf_ph, i);
+        if (Compare(pCle, pData) == 0) trouve = true;
         i++;
+        free(pCle);
+        pCle = NULL;
     }
     return trouve;
 }
@@ -913,31 +977,26 @@ int IX_IndexHandle::Compare(void* pData1, void*pData2){
     switch(ix_fileheader.type){
 
         case INT : {
-
-        int i1, i2;
-        memcpy(&i1, pData1, sizeof(int));
-        memcpy(&i2, pData2, sizeof(int));
-        if (i1<i2) return -1;
-        if (i1>i2) return +1;
-        return 0;
-        break;
-    }
+			int i1, i2;
+			memcpy(&i1, pData1, sizeof(int));
+			memcpy(&i2, pData2, sizeof(int));
+			if (i1<i2) return -1;
+			if (i1>i2) return +1;
+			return 0;
+        }
         case FLOAT : {
-
-        float f1, f2;
-        memcpy(&f1, pData1, sizeof(float));
-        memcpy(&f2, pData2, sizeof(float));
-        if (f1<f2) return -1;
-        if (f1>f2) return +1;
-        return 0;
-        break;
-    }
+			float f1, f2;
+			memcpy(&f1, pData1, sizeof(float));
+			memcpy(&f2, pData2, sizeof(float));
+			if (f1<f2) return -1;
+			if (f1>f2) return +1;
+			return 0;
+		}
         case STRING : {
-        char *s1 = (char*) pData1;
-        char *s2 = (char*) pData2;
-
-        return strncmp(s1,s2,ix_fileheader.tailleCle);
-    }
+			char *s1 = (char*) pData1;
+			char *s2 = (char*) pData2;
+			return strncmp(s1,s2,ix_fileheader.tailleCle);
+		}
     }
     return 0;
 }
@@ -962,7 +1021,7 @@ RC IX_IndexHandle::DeleteEntry(void *pData, const RID &rid) {
 RC IX_IndexHandle::DeleteEntryAtNode(PageNum pageNum, void* pData, const RID &rid) {
     RC rc = 0;
     int i;
-    void* pCle;
+    void* pCle = NULL;
 
     PF_PageHandle pf_pagehandle;
     rc = pf_filehandle->GetThisPage(pageNum, pf_pagehandle);
@@ -1037,7 +1096,9 @@ RC IX_IndexHandle::DeleteEntryAtLeafNode(PageNum pageNum, void* pData, const RID
     memcpy(&header, pData2, sizeof(IX_NoeudHeader));
 
     bool trouve = false;
-    void* pCle;
+    void* pCle = NULL;
+    void* pCle2 = NULL;
+
     while ( (i<=header.nbCle) && !trouve ){
         pCle = GetCle(pf_pagehandle, i);
         if(Compare(pData, pCle) == 0) {
@@ -1050,19 +1111,30 @@ RC IX_IndexHandle::DeleteEntryAtLeafNode(PageNum pageNum, void* pData, const RID
         i++;
     }
     if (pos == 0) {
-    if (Compare(pData, GetCle(pf_pagehandle, 1)) < 0 && header.prevPage != -1) {
-        rc = pf_filehandle->UnpinPage(pageNum);
-        if(rc) return rc;
+    	pCle2 = GetCle(pf_pagehandle, header.nbCle);
+    	pCle = GetCle(pf_pagehandle, 1);
 
-        return DeleteEntryAtLeafNode(header.prevPage, pData, rid);
-    } else if (Compare(pData, GetCle(pf_pagehandle, header.nbCle)) > 0 && header.nextPage != -1) {
-        rc = pf_filehandle->UnpinPage(pageNum);
-        if(rc) return rc;
+		if (Compare(pData, pCle) < 0 && header.prevPage != -1) {
+			rc = pf_filehandle->UnpinPage(pageNum);
+			if(rc) return rc;
 
-        return DeleteEntryAtLeafNode(header.nextPage, pData, rid);
-    } else {
-        return IX_KEYNOTEXISTS; //Ne devrait jamais arriver
-    }
+			rc = DeleteEntryAtLeafNode(header.prevPage, pData, rid);
+		} else if (Compare(pData, pCle2) > 0 && header.nextPage != -1) {
+			rc = pf_filehandle->UnpinPage(pageNum);
+			if(rc) return rc;
+
+			rc = DeleteEntryAtLeafNode(header.nextPage, pData, rid);
+		} else {
+			rc = IX_KEYNOTEXISTS; //Ne devrait jamais arriver
+		}
+
+		free(pCle2);
+		pCle2 = NULL;
+
+		free(pCle);
+		pCle = NULL;
+
+		return rc;
     }
 
     PageNum nextPage = GetPtr(pf_pagehandle, pos);
@@ -1409,9 +1481,6 @@ RC IX_IndexHandle::FindNewRoot(PageNum pageNum) {
 
     return rc;
 }
-
-
-
 
 // Force index files to disk
 RC IX_IndexHandle::ForcePages() {
