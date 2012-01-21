@@ -40,7 +40,7 @@ RM_SOURCES     = rm_rid.cc rm_record.cc rm_manager.cc rm_filescan.cc \
                  rm_error.cc rm_filehandle.cc BitmapManager.cc \
                  rm_pageheader.cc
 IX_SOURCES     = ix_manager.cc ix_indexhandle.cc ix_indexscan.cc ix_error.cc
-SM_SOURCES     = sm_stub.cc printer.cc
+SM_SOURCES     = sm_manager.cc printer.cc
 QL_SOURCES     = ql_manager_stub.cc
 UTILS_SOURCES  = dbcreate.cc dbdestroy.cc tinybase.cc
 PARSER_SOURCES = scan.c parse.c nodes.c interp.c
