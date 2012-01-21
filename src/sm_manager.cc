@@ -402,8 +402,57 @@ RC SM_Manager::Load(const char *relName,
 
 RC SM_Manager::Print(const char *relName)
 {
+    if(!bIsOpen)
+        return SM_BADTABLE;
+
     cout << "Print\n"
-         << "   relName=" << relName << "\n";
+         << "   relName=" << relName << "\n\n";
+
+    DataAttrInfo* attributes;
+    int attrNb;
+    RC rc;
+
+    rc = GetAttributesFromRel(relName, attributes, attrNb);
+    if(rc) return rc;
+
+    Printer p(attributes, attrNb);
+    p.PrintHeader(cout);
+
+    // Contrairement aux fonctions Help, ici nous allons afficher le contenu de la table
+    RM_FileHandle* pFileHandle = NULL;
+    if(strcmp(relName, "relcat") == 0)
+        pFileHandle = &relcat_fh;
+    else if(strcmp(relName, "attrcat") == 0)
+        pFileHandle = &attrcat_fh;
+    else {
+        rc = rmm.OpenFile(relName,*pFileHandle);
+        if(rc) return rc;
+    }
+
+    RM_FileScan fs;
+    RM_Record rec;
+    if ((rc=fs.OpenScan(*pFileHandle, INT, sizeof(int), 0,
+            NO_OP, NULL, NO_HINT)))
+        return rc;
+
+    int n;
+    for (rc = fs.GetNextRec(rec), n = 0;
+         rc == 0;
+         rc = fs.GetNextRec(rec), n++) {
+
+        char* pData;
+        rec.GetData(pData);
+        p.Print(cout, pData);
+    }
+
+    if (rc != RM_EOF && rc != 0)
+        return rc;
+
+    if ((rc=fs.CloseScan()))
+        return rc;
+
+    p.PrintFooter(cout);
+
     return (0);
 }
 
@@ -427,6 +476,8 @@ RC SM_Manager::Help()
 {
     if(!bIsOpen)
         return SM_BADTABLE;
+
+    cout << "Help\n\n";
 
     DataAttrInfo* attributes;
     int attrNb;
@@ -468,7 +519,6 @@ RC SM_Manager::Help()
 
     p.PrintFooter(cout);
 
-    cout << "Help\n";
     return (0);
 }
 
@@ -476,6 +526,9 @@ RC SM_Manager::Help(const char *relName)
 {
     if(!bIsOpen)
         return SM_BADTABLE;
+
+    cout << "Help\n"
+         << "   relName=" << relName << "\n\n";
 
     DataAttrInfo* attributes;
     int attrNb;
@@ -511,9 +564,6 @@ RC SM_Manager::Help(const char *relName)
 
     p.PrintFooter(cout);
 
-
-    cout << "Help\n"
-         << "   relName=" << relName << "\n";
     return (0);
 }
 
