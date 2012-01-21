@@ -573,11 +573,6 @@ RC SM_Manager::Help(const char *relName)
     return (0);
 }
 
-void SM_PrintError(RC rc)
-{
-    cout << "SM_PrintError\n   rc=" << rc << "\n";
-}
-
 RC SM_Manager::GetAttributesFromRel(const char* relName, DataAttrInfo* & attributes, int& attrNb) const {
     RC rc;
     RID rid;
@@ -629,4 +624,67 @@ RC SM_Manager::GetAttributesFromRel(const char* relName, DataAttrInfo* & attribu
         return rc;
 
     return 0;
+}
+
+
+///////////////////////////////////////////////////////////////////////////////
+// Error management
+///////////////////////////////////////////////////////////////////////////////
+
+//
+// Error table
+//
+static char *SM_WarnMsg[] = {
+    (char*)"index already exists",
+    (char*)"no index to destroy",
+    (char*)"forbidden operation"
+};
+
+static char *SM_ErrorMsg[] = {
+    (char*)"Fail to open DB",
+    (char*)"DB already openned",
+    (char*)"DB not found",
+    (char*)"DB not openned",
+    (char*)"Invalid number of attributes",
+    (char*)"Bad Table",
+    (char*)"No Table found",
+    (char*)"Bad attribute",
+    (char*)"Invalid parameter"
+};
+
+//
+// SM_PrintError
+//
+// Desc: Send a message corresponding to a SM return code to cerr
+// In:   rc - return code for which a message is desired
+//
+void SM_PrintError(RC rc)
+{
+    // Check the return code is within proper limits
+	if (rc >= START_SM_WARN && rc <= SM_LASTWARN)
+		// Print warning
+		cerr << "SM warning: " << SM_WarnMsg[rc - START_SM_WARN] << "\n";
+
+	// Error codes are negative, so invert everything
+	else if (-rc >= -START_SM_ERR && -rc <= -SM_LASTERROR)
+		// Print error
+		cerr << "SM error: " << SM_ErrorMsg[-rc + START_SM_ERR] << "\n";
+
+	else if ((rc >= START_IX_WARN && rc <= IX_LASTWARN) || (-rc >= -START_IX_ERR && -rc <= -IX_LASTERROR))
+		IX_PrintError(rc);
+	
+	else if ((rc >= START_PF_WARN && rc <= PF_LASTWARN) ||
+		 (-rc >= -START_PF_ERR && -rc < -PF_LASTERROR) ||
+			  (rc == PF_UNIX))
+		PF_PrintError(rc);
+
+	else if ((rc >= START_RM_WARN && rc <= RM_LASTWARN) ||
+		 (-rc >= -START_RM_ERR && -rc < -RM_LASTERROR))
+		RM_PrintError(rc);
+
+	else if (rc == 0)
+		cerr << "SM_PrintError called with return code of 0\n";
+
+	else
+		cerr << "SM error: " << rc << " is out of bounds\n";
 }
