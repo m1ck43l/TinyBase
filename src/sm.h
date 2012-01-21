@@ -16,6 +16,29 @@
 #include "ix.h"
 
 //
+// Catalog attr
+//
+typedef struct attr_cat {
+    int offset;
+    AttrType attrType;
+    int attrLength;
+    int indexNo;
+    char relName[MAXNAME+1];
+    char attrName[MAXNAME+1];
+} AttrCat;
+
+//
+// Catalog Rel
+//
+typedef struct rel_cat {
+    int recordLength;
+    int attrNb;
+    int pageNb; // nombre de pages de la relation
+    int recordNb;
+    char relName[MAXNAME+1];
+} RelCat;
+
+//
 // SM_Manager: provides data management
 //
 class SM_Manager {

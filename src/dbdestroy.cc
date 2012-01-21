@@ -33,7 +33,11 @@ main(int argc, char *argv[])
     dbname = argv[1];
 
     // Create a subdirectory for the database
-    system (strcat(command,dbname));
+    rc = system (strcat(command,dbname));
+    if (rc != 0) {
+        cerr << argv[0] << ": Impossible du supprimer la db " << dbname << endl;
+        exit(rc);
+    }
 
     return(0);
 }
