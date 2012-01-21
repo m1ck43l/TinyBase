@@ -420,13 +420,16 @@ RC SM_Manager::Print(const char *relName)
 
     // Contrairement aux fonctions Help, ici nous allons afficher le contenu de la table
     RM_FileHandle* pFileHandle = NULL;
+    RM_FileHandle fh;
     if(strcmp(relName, "relcat") == 0)
         pFileHandle = &relcat_fh;
     else if(strcmp(relName, "attrcat") == 0)
         pFileHandle = &attrcat_fh;
     else {
-        rc = rmm.OpenFile(relName,*pFileHandle);
+        rc = rmm.OpenFile(relName,fh);
         if(rc) return rc;
+
+        pFileHandle = &fh;
     }
 
     RM_FileScan fs;
