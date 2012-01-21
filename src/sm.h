@@ -16,6 +16,7 @@
 #include "ix.h"
 #include <map>
 #include <string>
+#include "printer.h"
 
 //
 // Catalog attr
@@ -84,6 +85,9 @@ private:
 
     // Recupere un tuple de la table attrcat
     RC GetAttrTpl(const char* relName, const char* attrName, AttrCat& attrTpl, RID& rid) const;
+
+    // Construction de DataAttrInfo
+    RC GetAttributesFromRel(const char* relName, DataAttrInfo* & attributes, int& attrNb) const;
 };
 
 //

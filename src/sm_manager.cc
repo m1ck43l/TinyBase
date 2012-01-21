@@ -11,6 +11,7 @@
 #include "sm.h"
 #include "ix.h"
 #include "rm.h"
+#include "printer.h"
 
 using namespace std;
 
@@ -424,12 +425,93 @@ RC SM_Manager::Set(const char *paramName, const char *value)
 
 RC SM_Manager::Help()
 {
+    if(!bIsOpen)
+        return SM_BADTABLE;
+
+    DataAttrInfo* attributes;
+    int attrNb;
+    RC rc;
+
+    rc = GetAttributesFromRel("relcat", attributes, attrNb);
+    if(rc) return rc;
+
+    // On ne veut afficher que l'attribut relName
+    for( ;; attributes++) {
+        if(strcmp((*attributes).attrName, "relName") == 0)
+            break;
+    }
+
+    Printer p(attributes, 1);
+    p.PrintHeader(cout);
+
+    RM_FileScan fs;
+    RM_Record rec;
+    if ((rc=fs.OpenScan(relcat_fh, INT, sizeof(int), 0,
+            NO_OP, NULL, NO_HINT)))
+        return rc;
+
+    int n;
+    for (rc = fs.GetNextRec(rec), n = 0;
+         rc == 0;
+         rc = fs.GetNextRec(rec), n++) {
+
+        char* pData;
+        rec.GetData(pData);
+        p.Print(cout, pData);
+    }
+
+    if (rc != RM_EOF && rc != 0)
+        return rc;
+
+    if ((rc=fs.CloseScan()))
+        return rc;
+
+    p.PrintFooter(cout);
+
     cout << "Help\n";
     return (0);
 }
 
 RC SM_Manager::Help(const char *relName)
 {
+    if(!bIsOpen)
+        return SM_BADTABLE;
+
+    DataAttrInfo* attributes;
+    int attrNb;
+    RC rc;
+
+    rc = GetAttributesFromRel(relName, attributes, attrNb);
+    if(rc) return rc;
+
+    Printer p(attributes, attrNb);
+    p.PrintHeader(cout);
+
+    RM_FileScan fs;
+    RM_Record rec;
+    if ((rc=fs.OpenScan(attrcat_fh, STRING, MAXNAME+1, offsetof(AttrCat,relName),
+            EQ_OP, (void*) relName, NO_HINT)))
+        return rc;
+
+    int n;
+    for (rc = fs.GetNextRec(rec), n = 0;
+         rc == 0;
+         rc = fs.GetNextRec(rec), n++) {
+
+        char* pData;
+        rec.GetData(pData);
+        p.Print(cout, pData);
+    }
+
+    if (rc != RM_EOF && rc != 0)
+        return rc;
+
+    if ((rc=fs.CloseScan()))
+        return rc;
+
+    p.PrintFooter(cout);
+
+
     cout << "Help\n"
          << "   relName=" << relName << "\n";
     return (0);
@@ -440,3 +522,55 @@ void SM_PrintError(RC rc)
     cout << "SM_PrintError\n   rc=" << rc << "\n";
 }
 
+RC SM_Manager::GetAttributesFromRel(const char* relName, DataAttrInfo* & attributes, int& attrNb) const {
+    RC rc;
+    RID rid;
+
+    if(!bIsOpen)
+        return SM_DBNOTOPEN;
+
+    if(relName == NULL)
+        return SM_BADTABLE;
+
+    // On recupere les infos sur la relation
+    RelCat currentRel;
+    rc = GetRelTpl(relName, currentRel, rid);
+    if(rc) return rc;
+
+    // On construit les objets de sortie
+    attrNb = currentRel.attrNb;
+    attributes = new DataAttrInfo[attrNb];
+
+    // On scan les attr
+    RM_FileScan fs;
+    RM_Record rec;
+    if ((rc=fs.OpenScan(attrcat_fh, STRING, MAXNAME+1, offsetof(AttrCat, relName),
+            EQ_OP, (void*) relName, NO_HINT)))
+        return rc;
+
+    AttrCat *attrTmp;
+    int n;
+    for (rc = fs.GetNextRec(rec), n = 0;
+         rc == 0;
+         rc = fs.GetNextRec(rec), n++) {
+
+        rc = rec.GetData((char*&)attrTmp);
+        if (rc) return rc;
+
+        // Copie de l'attribut
+        attributes[n].indexNo = attrTmp->indexNo;
+        attributes[n].attrLength = attrTmp->attrLength;
+        attributes[n].attrType = attrTmp->attrType;
+        attributes[n].offset = attrTmp->offset;
+        strcpy(attributes[n].relName, attrTmp->relName);
+        strcpy(attributes[n].attrName, attrTmp->attrName);
+    }
+
+    if (rc != RM_EOF && rc != 0)
+        return rc;
+
+    if ((rc=fs.CloseScan()))
+        return rc;
+
+    return 0;
+}
