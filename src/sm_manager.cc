@@ -83,7 +83,7 @@ RC SM_Manager::CreateTable(const char *relName,
     if (!bIsOpen)
         return SM_DBNOTOPEN;
 
-    if (relName == NULL || strcmp(relName, "relcat") == 0 || strcmp (relName, "attrcat"))
+    if (relName == NULL || strcmp(relName, "relcat") == 0 || strcmp(relName, "attrcat") == 0)
         return SM_BADTABLE;
 
     if (attrCount < 1 || attrCount > MAXATTRS)
