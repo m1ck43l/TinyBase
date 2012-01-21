@@ -65,7 +65,7 @@ RC SM_Manager::CloseDb()
     bIsOpen = false;
 
     // On retourne au bon path
-    chdir("..");
+    rc = chdir("..");
 
     return (0);
 }
@@ -74,15 +74,58 @@ RC SM_Manager::CreateTable(const char *relName,
                            int        attrCount,
                            AttrInfo   *attributes)
 {
+    RC rc;
+    RID rid;
+
+    // Sanity check
+    if (!bIsOpen)
+        return SM_DBNOTOPEN;
+
+    if (relName == NULL || strcmp(relName, "relcat") == 0 || strcmp (relName, "attrcat"))
+        return SM_BADTABLE;
+
+    if (attrCount < 1 || attrCount > MAXATTRS)
+        return SM_INVALIDATTRNB;
+
     cout << "CreateTable\n"
          << "   relName     =" << relName << "\n"
          << "   attrCount   =" << attrCount << "\n";
-    for (int i = 0; i < attrCount; i++)
+
+    int recordLength = 0;
+    for (int i = 0; i < attrCount; i++) {
+        // On ajoute chacun des attributes ds le catalogue
+        AttrCat newAttr;
+        newAttr.offset = recordLength;
+        newAttr.attrType = attributes[i].attrType;
+        newAttr.attrLength = attributes[i].attrLength;
+        newAttr.indexNo = -1;
+        strcpy(newAttr.relName, relName);
+        strcpy(newAttr.attrName, attributes[i].attrName);
+        rc = attrcat_fh.InsertRec((char*)&newAttr, rid);
+        if(rc) return rc;
+
         cout << "   attributes[" << i << "].attrName=" << attributes[i].attrName
              << "   attrType="
              << (attributes[i].attrType == INT ? "INT" :
                  attributes[i].attrType == FLOAT ? "FLOAT" : "STRING")
              << "   attrLength=" << attributes[i].attrLength << "\n";
+        recordLength += attributes[i].attrLength;
+    }
+
+    // On ajoute la relation au catalogue
+    RelCat newRel;
+    newRel.recordLength = recordLength;
+    newRel.attrNb = attrCount;
+    newRel.pageNb = 1;
+    newRel.recordNb = 0;
+    strcpy(newRel.relName, relName);
+    rc = relcat_fh.InsertRec((char*)&newRel, rid);
+    if(rc) return rc;
+
+    // On cre le nouveau fichier
+    rc = rmm.CreateFile(relName, recordLength);
+    if(rc) return rc;
+
     return (0);
 }
 

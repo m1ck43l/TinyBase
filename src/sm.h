@@ -86,6 +86,8 @@ void SM_PrintError(RC rc);
 #define SM_ALREADYOPEN      (START_SM_ERR - 1)
 #define SM_DBNOTFOUND       (START_SM_ERR - 2)
 #define SM_DBNOTOPEN        (START_SM_ERR - 3)
-#define SM_LASTERROR        SM_DBNOTOPEN
+#define SM_INVALIDATTRNB    (START_SM_ERR - 4)
+#define SM_BADTABLE         (START_SM_ERR - 5)
+#define SM_LASTERROR        SM_BADTABLE
 
 #endif
