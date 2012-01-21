@@ -218,6 +218,7 @@ RC SM_Manager::CreateIndex(const char *relName,
 
     AttrCat currentAttr;
     rc = GetAttrTpl(relName, attrName, currentAttr, rid);
+    if(rc) return rc;
 
     if (currentAttr.indexNo != -1)
         return SM_IDXALRDYEXISTS;
@@ -289,6 +290,31 @@ RC SM_Manager::CreateIndex(const char *relName,
 RC SM_Manager::DropIndex(const char *relName,
                          const char *attrName)
 {
+    RC rc;
+    RID rid;
+
+    if (relName == NULL || attrName == NULL)
+        return SM_BADTABLE;
+
+    AttrCat currentAttr;
+    rc = GetAttrTpl(relName, attrName, currentAttr, rid);
+    if(rc) return rc;
+
+    if (currentAttr.indexNo == -1)
+        return SM_NOIDXTODESTROY;
+
+    // l'index existe donc on detruit le fichier
+    rc = ixm.DestroyIndex(relName, currentAttr.indexNo);
+    if(rc) return rc;
+
+    // L'index a ete detruit donc on met a jour le catalogue
+    currentAttr.indexNo = -1;
+    RM_Record rec;
+    rec.Set((char*)&currentAttr, sizeof(AttrCat));
+    rec.SetRID(rid);
+    rc = attrcat_fh.UpdateRec(rec);
+    if(rc) return rc;
+
     cout << "DropIndex\n"
          << "   relName =" << relName << "\n"
          << "   attrName=" << attrName << "\n";
