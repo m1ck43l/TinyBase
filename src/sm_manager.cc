@@ -217,6 +217,9 @@ RC SM_Manager::DropTable(const char *relName)
     if (relName == NULL)
         return SM_BADTABLE;
 
+    if (strcmp(relName, "attrcat") == 0 || strcmp(relName, "relcat") == 0)
+        return SM_FORBIDDEN;
+
     // On recupere le tuple dans relcat
     RelCat currentRel;
     rc = GetRelTpl(relName, currentRel, rid);
