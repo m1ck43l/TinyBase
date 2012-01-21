@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <cstdio>
+#include <iostream>
 
 RM_FileScan::RM_FileScan()
 {
@@ -89,13 +90,16 @@ RC RM_FileScan::OpenScan(const RM_FileHandle &fileHandle,
     return rc; //S'il y a d'autres erreurs
   }
 
-  rc = pfph.GetPageNum(numCurPage);
-  if (rc){
-    return rc;
-  }
+  // Si numCurPage = -1 alors on ne UnPin pas la page...
+  if (numCurPage != -1) {
+	rc = pfph.GetPageNum(numCurPage);
+	if (rc){
+	  return rc;
+	}
 
-  rc = fileHandle.pf_filehandle->UnpinPage(numCurPage);
-  if (rc) return rc;
+	rc = fileHandle.pf_filehandle->UnpinPage(numCurPage);
+	if (rc) return rc;
+  }
 
   //On a réussi à ouvrir le scan
   bOpen = true;
