@@ -12,13 +12,15 @@
 #include "redbase.h"
 #include "rm.h"
 #include "sm.h"
+#include "ql.h"
+#include "parser.h"
 
 using namespace std;
 
 //
 // main
 //
-main(int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     char *dbname;
     RC rc;
@@ -31,11 +33,27 @@ main(int argc, char *argv[])
         exit(1);
     }
 
-    // *********************************
-    //
-    // Fair amount to be filled in here!!
-    //
-    // *********************************
+    dbname = argv[1];
+
+    // On declare tous les managers pour les passer à RBparse
+    PF_Manager pfm;
+    RM_Manager rmm(pfm);
+    IX_Manager ixm(pfm);
+    SM_Manager smm(ixm, rmm);
+    QL_Manager qlm(smm, ixm, rmm);
+
+    // On ouvre la DB
+    rc = smm.OpenDb(dbname);
+    if(rc) { SM_PrintError(rc); exit(rc); }
+
+    // On appelle le parser
+    RBparse(pfm, smm, qlm);
+
+    // On referme la DB
+    rc = smm.CloseDb();
+    if(rc) { SM_PrintError(rc); exit(rc); }
 
     cout << "Bye.\n";
+
+    return 0;
 }
