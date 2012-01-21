@@ -133,6 +133,9 @@ RC SM_Manager::CreateTable(const char *relName,
 RC SM_Manager::GetRelTpl(const char* relName, RelCat& relTpl, RID& rid) const {
     RC rc;
 
+    if (!bIsOpen)
+        return SM_DBNOTOPEN;
+
     if(relName == NULL)
         return SM_BADTABLE;
 
@@ -162,6 +165,9 @@ RC SM_Manager::GetRelTpl(const char* relName, RelCat& relTpl, RID& rid) const {
 
 RC SM_Manager::GetAttrTpl(const char* relName, const char* attrName, AttrCat& attrTpl, RID& rid) const {
     RC rc;
+
+    if (!bIsOpen)
+        return SM_DBNOTOPEN;
 
     if (relName == NULL || attrName == NULL)
         return SM_BADTABLE;
@@ -205,6 +211,9 @@ RC SM_Manager::DropTable(const char *relName)
 {
     RC rc;
     RID rid;
+
+    if (!bIsOpen)
+        return SM_DBNOTOPEN;
 
     if (relName == NULL)
         return SM_BADTABLE;
@@ -268,6 +277,9 @@ RC SM_Manager::CreateIndex(const char *relName,
 {
     RC rc;
     RID rid;
+
+    if (!bIsOpen)
+        return SM_DBNOTOPEN;
 
     if (relName == NULL || attrName == NULL)
         return SM_BADTABLE;
@@ -348,6 +360,9 @@ RC SM_Manager::DropIndex(const char *relName,
 {
     RC rc;
     RID rid;
+
+    if (!bIsOpen)
+        return SM_DBNOTOPEN;
 
     if (relName == NULL || attrName == NULL)
         return SM_BADTABLE;
