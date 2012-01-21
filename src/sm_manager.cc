@@ -13,8 +13,9 @@
 
 using namespace std;
 
-SM_Manager::SM_Manager(IX_Manager &ixm, RM_Manager &rmm)
+SM_Manager::SM_Manager(IX_Manager &ixm, RM_Manager &rmm):ixm(ixm), rmm(rmm)
 {
+    bIsOpen = false;
 }
 
 SM_Manager::~SM_Manager()
@@ -23,11 +24,49 @@ SM_Manager::~SM_Manager()
 
 RC SM_Manager::OpenDb(const char *dbName)
 {
+    RC rc;
+
+    if(dbName == NULL)
+        return SM_OPENFAILED;
+
+    if(bIsOpen)
+        return SM_ALREADYOPEN;
+
+    // On change le repertoire courant
+    if(chdir(dbName)<0)
+        return SM_DBNOTFOUND;
+
+    // On ouvre les catalogues
+    rc = rmm.OpenFile("relcat", relcat_fh);
+    if(rc) return rc;
+
+    rc = rmm.OpenFile("attrcat", attrcat_fh);
+    if(rc) return rc;
+
+    // La base est ouverte
+    bIsOpen = true;
+
     return (0);
 }
 
 RC SM_Manager::CloseDb()
 {
+    RC rc;
+
+    if(!bIsOpen)
+        return SM_DBNOTOPEN;
+
+    rc = rmm.CloseFile(relcat_fh);
+    if(rc) return rc;
+
+    rc = rmm.CloseFile(attrcat_fh);
+    if(rc) return rc;
+
+    bIsOpen = false;
+
+    // On retourne au bon path
+    chdir("..");
+
     return (0);
 }
 
