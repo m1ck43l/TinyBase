@@ -210,6 +210,76 @@ RC SM_Manager::DropTable(const char *relName)
 RC SM_Manager::CreateIndex(const char *relName,
                            const char *attrName)
 {
+    RC rc;
+    RID rid;
+
+    if (relName == NULL || attrName == NULL)
+        return SM_BADTABLE;
+
+    AttrCat currentAttr;
+    rc = GetAttrTpl(relName, attrName, currentAttr, rid);
+
+    if (currentAttr.indexNo != -1)
+        return SM_IDXALRDYEXISTS;
+    // on met a jour indexNo
+    currentAttr.indexNo = currentAttr.offset;
+
+    // Sinon on cre l'index
+    rc = ixm.CreateIndex(relName, currentAttr.indexNo, currentAttr.attrType, currentAttr.attrLength);
+    if(rc) return rc;
+
+    // L'index est cree donc on reecrit le attr dans attrcat
+    RM_Record rec;
+    rec.Set((char*)&currentAttr, sizeof(AttrCat));
+    rec.SetRID(rid);
+    rc = attrcat_fh.UpdateRec(rec);
+    if(rc) return rc;
+
+    // Maintenant on doit remplir l'index
+
+    // On ouvre l'index
+    IX_IndexHandle ixih;
+    rc = ixm.OpenIndex(relName, currentAttr.indexNo, ixih);
+    if(rc) return rc;
+
+    // On ouvre la relation
+    RM_FileHandle rmfh;
+    rc = rmm.OpenFile(relName, rmfh);
+    if(rc) return rc;
+
+    // On ouvre le scan
+    RM_FileScan fs;
+    if ((rc=fs.OpenScan(rmfh, currentAttr.attrType, currentAttr.attrLength, currentAttr.offset,
+            NO_OP, NULL, NO_HINT)))
+        return rc;
+
+    int n;
+    for (rc = fs.GetNextRec(rec), n = 0;
+         rc == 0;
+         rc = fs.GetNextRec(rec), n++) {
+
+        // Chaque tuple trouve doit etre indexe
+        char* pData;
+        rc = rec.GetData(pData);
+        if(rc) return rc;
+
+        rc = ixih.InsertEntry(pData + currentAttr.offset, rid);
+    }
+
+    if (rc != RM_EOF && rc != 0)
+        return rc;
+
+    if ((rc=fs.CloseScan()))
+        return rc;
+
+    // on ferme le fichier
+    rc = rmm.CloseFile(rmfh);
+    if(rc) return rc;
+
+    // on ferme l'index
+    rc = ixm.CloseIndex(ixih);
+    if(rc) return rc;
+
     cout << "CreateIndex\n"
          << "   relName =" << relName << "\n"
          << "   attrName=" << attrName << "\n";

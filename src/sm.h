@@ -88,6 +88,9 @@ private:
 //
 void SM_PrintError(RC rc);
 
+#define SM_IDXALRDYEXISTS   (START_SM_WARN + 0)
+#define SM_LASTWARN         SM_IDXALRDYEXISTS
+
 #define SM_OPENFAILED       (START_SM_ERR - 0) // Fail to open DB
 #define SM_ALREADYOPEN      (START_SM_ERR - 1)
 #define SM_DBNOTFOUND       (START_SM_ERR - 2)
