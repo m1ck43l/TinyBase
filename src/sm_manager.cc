@@ -203,6 +203,62 @@ RC SM_Manager::GetAttrTpl(const char* relName, const char* attrName, AttrCat& at
 
 RC SM_Manager::DropTable(const char *relName)
 {
+    RC rc;
+    RID rid;
+
+    if (relName == NULL)
+        return SM_BADTABLE;
+
+    // On recupere le tuple dans relcat
+    RelCat currentRel;
+    rc = GetRelTpl(relName, currentRel, rid);
+    if(rc) return rc;
+
+    // Destruction du fichier
+    rc = rmm.DestroyFile(relName);
+    if(rc) return rc;
+
+    // Destruction du tuple
+    rc = relcat_fh.DeleteRec(rid);
+    if(rc) return rc;
+
+    // On doit maintenant recuperer tous les attributs et les detruire avec leur index
+    RM_FileScan fs;
+    RM_Record rec;
+    if ((rc=fs.OpenScan(attrcat_fh, STRING, MAXNAME+1, offsetof(AttrCat, relName),
+            EQ_OP, (void*) relName, NO_HINT)))
+        return rc;
+
+    AttrCat *attrTmp;
+    int n;
+    for (rc = fs.GetNextRec(rec), n = 0;
+         rc == 0;
+         rc = fs.GetNextRec(rec), n++) {
+
+        rc = rec.GetData((char*&)attrTmp);
+        if(rc) return rc;
+
+        if(attrTmp->indexNo != -1) {
+            // un index existe donc on le destroy
+            rc = DropIndex(relName, attrTmp->attrName);
+            if(rc) return rc;
+        }
+
+        // Destruction du tuple
+        // TODO --> verifier que le scan n'est pas casser a la suite de la suppression !
+        rc = rec.GetRid(rid);
+        if(rc) return rc;
+
+        rc = attrcat_fh.DeleteRec(rid);
+        if(rc) return rc;
+    }
+
+    if (rc != RM_EOF && rc != 0)
+        return rc;
+
+    if ((rc=fs.CloseScan()))
+        return rc;
+
     cout << "DropTable\n   relName=" << relName << "\n";
     return (0);
 }
