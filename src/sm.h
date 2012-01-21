@@ -35,8 +35,6 @@ typedef struct attr_cat {
 typedef struct rel_cat {
     int recordLength;
     int attrNb;
-    int pageNb; // nombre de pages de la relation
-    int recordNb;
     char relName[MAXNAME+1];
 } RelCat;
 

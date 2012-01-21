@@ -78,9 +78,7 @@ int main(int argc, char *argv[])
     // Now we need to insert the two above relations in relcat
     RelCat relcat_tbl;
     relcat_tbl.recordLength = sizeof(RelCat);
-    relcat_tbl.attrNb = 5;
-    relcat_tbl.pageNb = 1;
-    relcat_tbl.recordNb = 2; // relcat and attrcat
+    relcat_tbl.attrNb = 3;
     strcpy(relcat_tbl.relName, "relcat");
     rc = relcat_fh.InsertRec((char*)&relcat_tbl, rid);
     if(rc) DB_PrintError(rc);
@@ -88,8 +86,6 @@ int main(int argc, char *argv[])
     RelCat attrcat_tbl;
     attrcat_tbl.recordLength = sizeof(AttrCat);
     attrcat_tbl.attrNb = 6;
-    attrcat_tbl.pageNb = 1;
-    attrcat_tbl.recordNb = 11; // 6 + 5
     strcpy(attrcat_tbl.relName, "attrcat");
     rc = relcat_fh.InsertRec((char*)&attrcat_tbl, rid);
     if(rc) DB_PrintError(rc);
@@ -113,26 +109,6 @@ int main(int argc, char *argv[])
     strcpy(attrNb.relName, "relcat");
     strcpy(attrNb.attrName, "attrNb");
     rc = attrcat_fh.InsertRec((char*)&attrNb, rid);
-    if(rc) DB_PrintError(rc);
-
-    AttrCat pageNb;
-    pageNb.offset = offsetof(RelCat, pageNb);
-    pageNb.attrType = INT;
-    pageNb.attrLength = sizeof(int);
-    pageNb.indexNo = -1;
-    strcpy(pageNb.relName, "relcat");
-    strcpy(pageNb.attrName, "pageNb");
-    rc = attrcat_fh.InsertRec((char*)&pageNb, rid);
-    if(rc) DB_PrintError(rc);
-
-    AttrCat recordNb;
-    recordNb.offset = offsetof(RelCat, recordNb);
-    recordNb.attrType = INT;
-    recordNb.attrLength = sizeof(int);
-    recordNb.indexNo = -1;
-    strcpy(recordNb.relName, "relcat");
-    strcpy(recordNb.attrName, "recordNb");
-    rc = attrcat_fh.InsertRec((char*)&recordNb, rid);
     if(rc) DB_PrintError(rc);
 
     AttrCat relName;

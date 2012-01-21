@@ -117,8 +117,6 @@ RC SM_Manager::CreateTable(const char *relName,
     RelCat newRel;
     newRel.recordLength = recordLength;
     newRel.attrNb = attrCount;
-    newRel.pageNb = 1;
-    newRel.recordNb = 0;
     strcpy(newRel.relName, relName);
     rc = relcat_fh.InsertRec((char*)&newRel, rid);
     if(rc) return rc;
