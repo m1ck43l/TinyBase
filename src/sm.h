@@ -75,6 +75,12 @@ private:
     RM_Manager& rmm;
 
     RM_FileHandle relcat_fh, attrcat_fh;
+
+    // Recupere un tuple de la table relcat
+    RC GetRelTpl(const char* relName, RelCat& relTpl, RID& rid) const;
+
+    // Recupere un tuple de la table attrcat
+    RC GetAttrTpl(const char* relName, const char* attrName, AttrCat& attrTpl, RID& rid) const;
 };
 
 //
@@ -88,6 +94,8 @@ void SM_PrintError(RC rc);
 #define SM_DBNOTOPEN        (START_SM_ERR - 3)
 #define SM_INVALIDATTRNB    (START_SM_ERR - 4)
 #define SM_BADTABLE         (START_SM_ERR - 5)
+#define SM_NOTBLFOUND       (START_SM_ERR - 6)
+#define SM_BADATTR          (START_SM_ERR - 7)
 #define SM_LASTERROR        SM_BADTABLE
 
 #endif

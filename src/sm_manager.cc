@@ -5,6 +5,7 @@
 //
 
 #include <cstdio>
+#include <cstddef>
 #include <iostream>
 #include "redbase.h"
 #include "sm.h"
@@ -127,6 +128,77 @@ RC SM_Manager::CreateTable(const char *relName,
     if(rc) return rc;
 
     return (0);
+}
+
+RC SM_Manager::GetRelTpl(const char* relName, RelCat& relTpl, RID& rid) const {
+    RC rc;
+
+    if(relName == NULL)
+        return SM_BADTABLE;
+
+    RM_FileScan fs;
+    if ((rc=fs.OpenScan(relcat_fh, STRING, MAXNAME+1, offsetof(RelCat, relName),
+            EQ_OP, (void*) relName, NO_HINT)))
+        return rc;
+
+    RM_Record rec;
+    rc = fs.GetNextRec(rec);
+    if(rc == RM_EOF) return SM_NOTBLFOUND;
+    else if(rc) return rc;
+
+    if ((rc=fs.CloseScan()))
+        return (rc);
+
+    // On a trouve la relation
+    char* pData;
+    rc = rec.GetData(pData);
+    if(rc) return rc;
+
+    memcpy(&relTpl, pData, sizeof(RelCat));
+    rec.GetRid(rid);
+
+    return 0;
+}
+
+RC SM_Manager::GetAttrTpl(const char* relName, const char* attrName, AttrCat& attrTpl, RID& rid) const {
+    RC rc;
+
+    if (relName == NULL || attrName == NULL)
+        return SM_BADTABLE;
+
+    RM_FileScan fs;
+    RM_Record rec;
+    if ((rc=fs.OpenScan(attrcat_fh, STRING, MAXNAME+1, offsetof(AttrCat, relName),
+            EQ_OP, (void*) relName, NO_HINT)))
+        return rc;
+
+    AttrCat *attrTmp;
+    int n;
+    bool found = false;
+    for (rc = fs.GetNextRec(rec), n = 0;
+         rc == 0;
+         rc = fs.GetNextRec(rec), n++) {
+
+        rc = rec.GetData((char*&)attrTmp);
+        if(strcmp(attrName, attrTmp->attrName) == 0) {
+            found = true;
+            break;
+        }
+    }
+
+    if (rc != RM_EOF && rc != 0)
+        return rc;
+
+    if ((rc=fs.CloseScan()))
+        return rc;
+
+    if (!found)
+        return SM_BADATTR;
+
+    memcpy(&attrTpl, attrTmp, sizeof(AttrCat));
+    rec.GetRid(rid);
+
+    return 0;
 }
 
 RC SM_Manager::DropTable(const char *relName)
