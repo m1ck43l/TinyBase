@@ -14,6 +14,8 @@
 #include "parser.h"
 #include "rm.h"
 #include "ix.h"
+#include <map>
+#include <string>
 
 //
 // Catalog attr
@@ -74,6 +76,9 @@ private:
     IX_Manager& ixm;
     RM_Manager& rmm;
 
+    // Params map
+    std::map<std::string,std::string> params;
+
     RM_FileHandle relcat_fh, attrcat_fh;
 
     // Recupere un tuple de la table relcat
@@ -100,6 +105,7 @@ void SM_PrintError(RC rc);
 #define SM_BADTABLE         (START_SM_ERR - 5)
 #define SM_NOTBLFOUND       (START_SM_ERR - 6)
 #define SM_BADATTR          (START_SM_ERR - 7)
+#define SM_INVALIDPARAM     (START_SM_ERR - 8)
 #define SM_LASTERROR        SM_BADTABLE
 
 #endif

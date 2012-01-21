@@ -410,6 +410,14 @@ RC SM_Manager::Print(const char *relName)
 
 RC SM_Manager::Set(const char *paramName, const char *value)
 {
+    if(!bIsOpen)
+        return SM_DBNOTOPEN;
+
+    if(paramName == NULL || value == NULL)
+        return SM_INVALIDPARAM;
+
+    params[paramName] = std::string(value);
+
     cout << "Set\n"
          << "   paramName=" << paramName << "\n"
          << "   value    =" << value << "\n";
