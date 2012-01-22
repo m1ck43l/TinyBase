@@ -415,8 +415,8 @@ RC SM_Manager::Load(const char *relName,
     
     // have to get all attributes from relName
     int attrCount;
-    AttrCat *attributes;
-    rc = GetAttributes(relName, attributes, attrCount);
+    DataAttrInfo *attributes;
+    rc = GetAttributesFromRel(relName, attributes, attrCount);
     if (rc) return rc;
 
     IX_IndexHandle *ixih_array = new IX_IndexHandle[attrCount];
@@ -534,68 +534,6 @@ RC SM_Manager::Load(const char *relName,
          << "   relName =" << relName << "\n"
          << "   fileName=" << fileName << "\n";
     return (0);
-}
-
-RC SM_Manager::GetAttributes(const char* relName, AttrCat*& attributes, int &attrCount)
-{
-    // to do
-    
-    RM_FileScan fs1;
-    RM_FileScan fs2;
-    RM_Record rec;
-    RC rc;
-
-    if (!bIsOpen)
-        return SM_DBNOTOPEN;
-
-    if (relName == NULL)
-        return SM_BADTABLE;
-
-    // get attrCount from relCat with relName
-    rc = fs1.OpenScan(relcat_fh,STRING,MAXNAME+1,offsetof(RelCat, relName), EQ_OP, (void*) relName, NO_HINT);
-    if (rc) return rc;
-    
-    rc = fs1.GetNextRec(rec);
-    if (rc) return rc;
-    
-    RelCat *relTmp;
-    rec.GetData((char*&)relTmp);
-    
-    attrCount = relTmp->attrNb;
-
-    rc = fs1.CloseScan();
-    if (rc) return rc;
-    
-    // we can now initialize attributes
-    attributes = new AttrCat[attrCount];
-
-    // Scan all attributes for relName
-    if ((rc=fs2.OpenScan(attrcat_fh, STRING, MAXNAME+1, offsetof(AttrCat, relName),
-            EQ_OP, (void*) relName, NO_HINT)))
-        return rc;
-
-    AttrCat *attrTmp;
-    int n;
-    bool found = false;
-    
-    int recNo = 0;
-    for (rc = fs2.GetNextRec(rec), n = 0; rc == 0; rc = fs2.GetNextRec(rec), n++) {
-
-        rc = rec.GetData((char*&)attrTmp);
-        
-        attributes[recNo] = *attrTmp;
-    }
-
-    if (rc != RM_EOF && rc != 0)
-        return rc;
-
-    if ((rc = fs2.CloseScan()))
-        return rc;
-
-    if (!found)
-        return SM_BADATTR;
-
-    return 0;
 }
 
 RC SM_Manager::Print(const char *relName)
