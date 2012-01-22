@@ -128,6 +128,10 @@ RC SM_Manager::CreateTable(const char *relName,
     // On cre le nouveau fichier
     rc = rmm.CreateFile(relName, recordLength);
     if(rc) return rc;
+    
+    // Force pages
+    relcat_fh.ForcePages();
+    attrcat_fh.ForcePages();
 
     return (0);
 }
@@ -273,6 +277,10 @@ RC SM_Manager::DropTable(const char *relName)
     if ((rc=fs.CloseScan()))
         return rc;
 
+    // Force pages
+	relcat_fh.ForcePages();
+	attrcat_fh.ForcePages();
+    
     cout << "DropTable\n   relName=" << relName << "\n";
     return (0);
 }

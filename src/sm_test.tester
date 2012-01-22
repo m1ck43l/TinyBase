@@ -9,7 +9,7 @@ set DBHOME = .
 
 #
 # TESTSDIR:  This is the directory where the files of test queries
-# are.  
+# are.
 #
 set TESTSDIR = .
 
