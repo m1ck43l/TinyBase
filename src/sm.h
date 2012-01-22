@@ -90,7 +90,7 @@ private:
     RC GetAttributesFromRel(const char* relName, DataAttrInfo* & attributes, int& attrNb) const;
     
     // Recupere tous les attributs d'une relation
-    RC GetAttributes(const char* relName, AttrCat*& attributes);
+    RC GetAttributes(const char* relName, AttrCat*& attributes, int &attrCount);
 };
 
 //
