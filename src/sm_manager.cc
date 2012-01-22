@@ -439,7 +439,7 @@ RC SM_Manager::Load(const char *relName,
     fichier.open(fileName, ifstream::in);
     if (fichier.fail()) {
         fichier.close();
-        return 9999; // je sais pas quelle erreur
+        return SM_BADTABLE;
     }
     else if (fichier.is_open()) {
         
