@@ -405,28 +405,30 @@ RC SM_Manager::Load(const char *relName,
     RM_FileHandle rmfh;
     IX_IndexHandle ixih;
     RID rid;
-    
+        
     if (relName == NULL || fileName == NULL)
         return SM_BADTABLE;
     
     // open relation file
     rc = rmm.OpenFile(relName, rmfh);
     if(rc) return rc;
-    
+        
     // have to get all attributes from relName
     int attrCount;
-    AttrCat *attributes;
-    rc = GetAttributes(relName, attributes, attrCount);
+    DataAttrInfo *attributes;
+    rc = GetAttributesFromRel(relName, attributes, attrCount);
     if (rc) return rc;
-
+    
     IX_IndexHandle *ixih_array = new IX_IndexHandle[attrCount];
-
+    
     // open index for each index
     for (int i = 0; i < attrCount; i++) {
-        rc = ixm.OpenIndex(relName, attributes[i].indexNo, ixih_array[i]);
-        if (rc) return rc;
+    	if (attributes[i].indexNo != -1) {
+    		rc = ixm.OpenIndex(relName, attributes[i].indexNo, ixih_array[i]);
+    		if (rc) return rc;
+    	}
     }
-    
+        
     // open file to read each line
     ifstream fichier;
     string line;
@@ -435,7 +437,7 @@ RC SM_Manager::Load(const char *relName,
     int bitmapSize;
     
     int j = 0;
-    
+        
     fichier.open(fileName, ifstream::in);
     if (fichier.fail()) {
         fichier.close();
@@ -443,11 +445,12 @@ RC SM_Manager::Load(const char *relName,
     }
     else if (fichier.is_open()) {
         
-        
-        
         for (int i = 0; i < attrCount; i++) {
             bitmapSize += attributes[i].attrLength;
         }
+        
+        // Initialize pData
+        pData = new char[bitmapSize];
             
         while ( fichier.good() ) {
             // use catalog attrcat information to read tuples in file
@@ -455,8 +458,9 @@ RC SM_Manager::Load(const char *relName,
             
             istringstream split(line);
             string value;
-            
+                        
             memset(pData, 0, bitmapSize); // reinitialise le tuple temporaire
+                        
             j = 0;
             while (getline(split, value, ',')) {
                 
@@ -505,8 +509,10 @@ RC SM_Manager::Load(const char *relName,
 
             // make appropriate index entries for the tuple
             for (int i = 0; i < attrCount; i++) {
-                rc = ixih.InsertEntry(pData, rid);
-                if (rc) return rc;
+            	if (attributes[i].indexNo != -1) { 
+					rc = ixih_array[i].InsertEntry(pData, rid);
+					if (rc) return rc;
+            	}
             }
             
         }
@@ -514,8 +520,10 @@ RC SM_Manager::Load(const char *relName,
     
     // close every indexes
     for (int i = 0; i < attrCount; i++) {
-        rc = ixm.CloseIndex(ixih_array[i]);
-        if (rc) return rc;
+    	if (attributes[i].indexNo != -1) { 
+			rc = ixm.CloseIndex(ixih_array[i]);
+			if (rc) return rc;
+    	}
     }
     
     // close relation file
@@ -536,67 +544,6 @@ RC SM_Manager::Load(const char *relName,
     return (0);
 }
 
-RC SM_Manager::GetAttributes(const char* relName, AttrCat*& attributes, int &attrCount)
-{
-    // to do
-    
-    RM_FileScan fs1;
-    RM_FileScan fs2;
-    RM_Record rec;
-    RC rc;
-
-    if (!bIsOpen)
-        return SM_DBNOTOPEN;
-
-    if (relName == NULL)
-        return SM_BADTABLE;
-
-    // get attrCount from relCat with relName
-    rc = fs1.OpenScan(relcat_fh,STRING,MAXNAME+1,offsetof(RelCat, relName), EQ_OP, (void*) relName, NO_HINT);
-    if (rc) return rc;
-    
-    rc = fs1.GetNextRec(rec);
-    if (rc) return rc;
-    
-    RelCat *relTmp;
-    rec.GetData((char*&)relTmp);
-    
-    attrCount = relTmp->attrNb;
-
-    rc = fs1.CloseScan();
-    if (rc) return rc;
-    
-    // we can now initialize attributes
-    attributes = new AttrCat[attrCount];
-
-    // Scan all attributes for relName
-    if ((rc=fs2.OpenScan(attrcat_fh, STRING, MAXNAME+1, offsetof(AttrCat, relName),
-            EQ_OP, (void*) relName, NO_HINT)))
-        return rc;
-
-    AttrCat *attrTmp;
-    int n;
-    bool found = false;
-    
-    int recNo = 0;
-    for (rc = fs2.GetNextRec(rec), n = 0; rc == 0; rc = fs2.GetNextRec(rec), n++) {
-
-        rc = rec.GetData((char*&)attrTmp);
-        
-        attributes[recNo] = *attrTmp;
-    }
-
-    if (rc != RM_EOF && rc != 0)
-        return rc;
-
-    if ((rc = fs2.CloseScan()))
-        return rc;
-
-    if (!found)
-        return SM_BADATTR;
-
-    return 0;
-}
 
 RC SM_Manager::Print(const char *relName)
 {
