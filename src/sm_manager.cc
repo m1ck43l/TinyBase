@@ -544,7 +544,6 @@ RC SM_Manager::Load(const char *relName,
     return (0);
 }
 
-
 RC SM_Manager::Print(const char *relName)
 {
     if(!bIsOpen)
