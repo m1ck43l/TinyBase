@@ -416,10 +416,12 @@ RC SM_Manager::Load(const char *relName,
     rc = GetAttributes(relName, attributes);
     attrCount = sizeof(attributes)/sizeof(AttrCat);
     if (rc) return rc;
-    
+
+    IX_IndexHandle *ixih_array = new IX_IndexHandle[attrCount];
+
     // open index for each index
     for (int i = 0; i < attrCount; i++) {
-        rc = ixm.OpenIndex(relName, attributes[i].indexNo, ixih);
+        rc = ixm.OpenIndex(relName, attributes[i].indexNo, ixih_array[i]);
         if (rc) return rc;
     }
     
@@ -433,12 +435,23 @@ RC SM_Manager::Load(const char *relName,
         return 1; // je sais pas quelle erreur
     }
     else if (fichier.is_open()) {
+        
+        char *pData;
+        
+        int bitmapSize;
+        
+        for (int i = 0; i < attrCount; i++) {
+            bitmapSize += attributes[i].attrLength;
+        }
+            
         while ( fichier.good() ) {
             // use catalog attrcat information to read tuples in file
             getline (fichier, line);
             
             istringstream split(line);
             string value;
+            
+            memset(pData, 0, bitmapSize); // reinitialise le tuple temporaire
             j = 0;
             while (getline(split, value, ',')) {
                 
@@ -449,53 +462,65 @@ RC SM_Manager::Load(const char *relName,
                 switch (attributes[j].attrType) {
                     
                     case INT:
-                        
-                        
+                        int val_int;
+                        stream >> val_int;
+                        memcpy(pData + attributes[j].offset, &val_int, attrLength);
                         break;
               
                     case FLOAT:
-                        
-                        
+                        float val_float;
+                        stream >> val_float;
+                        memcpy(pData + attributes[j].offset, &val_float, attrLength);
                         break;
               
                     case STRING:
-                        
+                        string val_string;
+                        stream >> val_string;
                         
                         // if entry is too long, let's truncate
+                        if (val_string.length() > attrLength) {
+                            val_string = val_string.substr(0, attrLength);
+                        }
                         
-                        
+                        if (val_string.length() < attrLength) {
+                            memcpy(pData + attributes[j].offset, &val_string, val_string.length());
+                        }
+                        else {
+                            memcpy(pData + attributes[j].offset, &val_string, attrLength);
+                        }
                         
                         break;
                 }
                 j++;
             }
             
-            // insert tuple into the relation
-            // rc = rmfh.InsertRec(pData, rid);
-            //             if (rc) return rc;
+            // insert temp tuple into the relation
+            rc = rmfh.InsertRec(pData, rid);
+            if (rc) return rc;
 
-            // for (int i = 0; i < attrCount; i++) {
-            //                 rc = ixih.InsertEntry(pData, rid);
-            //                 if (rc) return rc;
-            //             }
+            // make appropriate index entries for the tuple
+            for (int i = 0; i < attrCount; i++) {
+                rc = ixih.InsertEntry(pData, rid);
+                if (rc) return rc;
+            }
             
         }
     }
     
-    // update relName, tupleLength, attrCount, indexCount in relCat
-    
-    
-    
-    
+    // close every indexes
     for (int i = 0; i < attrCount; i++) {
-        rc = ixm.CloseIndex(ixih);
+        rc = ixm.CloseIndex(ixih_array[i]);
         if (rc) return rc;
     }
     
+    // close relation file
     rc = rmm.CloseFile(rmfh);
     if(rc) return rc;
     
+    // close fileName
     fichier.close();
+    
+    delete[] ixih_array;
     
     //****
     
