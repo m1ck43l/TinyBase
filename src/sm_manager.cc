@@ -437,7 +437,8 @@ RC SM_Manager::Load(const char *relName,
     int bitmapSize = 0;
     
     int j = 0;
-        
+    int lineNb = 0;
+    
     fichier.open(fileName, ifstream::in);
     if (fichier.fail()) {
         fichier.close();
@@ -456,6 +457,11 @@ RC SM_Manager::Load(const char *relName,
             // use catalog attrcat information to read tuples in file
             getline (fichier, line);
             
+            lineNb++;
+            
+            // ignore blank lines
+            if(line == "") continue;
+                        
             istringstream split(line);
             string value;
                         
@@ -500,6 +506,12 @@ RC SM_Manager::Load(const char *relName,
                         break;
                 }
                 j++;
+            }
+            
+            if(attrCount != j) {
+            	// Bad record 
+            	cout << "Found bad record at line " << lineNb << endl;
+            	continue;
             }
             
             // insert temp tuple into the relation
