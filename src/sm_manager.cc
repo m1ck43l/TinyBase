@@ -7,6 +7,9 @@
 #include <cstdio>
 #include <cstddef>
 #include <iostream>
+#include <fstream>
+#include <sstream>
+#include <string>
 #include "redbase.h"
 #include "sm.h"
 #include "ix.h"
@@ -397,10 +400,114 @@ RC SM_Manager::DropIndex(const char *relName,
 RC SM_Manager::Load(const char *relName,
                     const char *fileName)
 {
+    //****
+    RC rc;
+    RM_FileHandle rmfh;
+    IX_IndexHandle ixih;
+    RID rid;
+    
+    // open relation file
+    rc = rmm.OpenFile(relName, rmfh);
+    if(rc) return rc;
+    
+    // have to get all attributes from relName
+    int attrCount;
+    AttrCat *attributes;
+    rc = GetAttributes(relName, attributes);
+    attrCount = sizeof(attributes)/sizeof(AttrCat);
+    if (rc) return rc;
+    
+    // open index for each index
+    for (int i = 0; i < attrCount; i++) {
+        rc = ixm.OpenIndex(relName, attributes[i].indexNo, ixih);
+        if (rc) return rc;
+    }
+    
+    // open file to read each line
+    ifstream fichier;
+    string line;
+    int j = 0;
+    fichier.open(fileName, ifstream::in);
+    if (fichier.fail()) {
+        fichier.close();
+        return 1; // je sais pas quelle erreur
+    }
+    else if (fichier.is_open()) {
+        while ( fichier.good() ) {
+            // use catalog attrcat information to read tuples in file
+            getline (fichier, line);
+            
+            istringstream split(line);
+            string value;
+            j = 0;
+            while (getline(split, value, ',')) {
+                
+                istringstream stream(value);
+                
+                unsigned int attrLength = attributes[j].attrLength;
+                
+                switch (attributes[j].attrType) {
+                    
+                    case INT:
+                        
+                        
+                        break;
+              
+                    case FLOAT:
+                        
+                        
+                        break;
+              
+                    case STRING:
+                        
+                        
+                        // if entry is too long, let's truncate
+                        
+                        
+                        
+                        break;
+                }
+                j++;
+            }
+            
+            // insert tuple into the relation
+            // rc = rmfh.InsertRec(pData, rid);
+            //             if (rc) return rc;
+
+            // for (int i = 0; i < attrCount; i++) {
+            //                 rc = ixih.InsertEntry(pData, rid);
+            //                 if (rc) return rc;
+            //             }
+            
+        }
+    }
+    
+    // update relName, tupleLength, attrCount, indexCount in relCat
+    
+    
+    
+    
+    for (int i = 0; i < attrCount; i++) {
+        rc = ixm.CloseIndex(ixih);
+        if (rc) return rc;
+    }
+    
+    rc = rmm.CloseFile(rmfh);
+    if(rc) return rc;
+    
+    fichier.close();
+    
+    //****
+    
     cout << "Load\n"
          << "   relName =" << relName << "\n"
          << "   fileName=" << fileName << "\n";
     return (0);
+}
+
+RC SM_Manager::GetAttributes(const char* relName, AttrCat*& attributes)
+{
+    // to do
 }
 
 RC SM_Manager::Print(const char *relName)
