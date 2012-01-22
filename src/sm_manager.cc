@@ -561,7 +561,7 @@ RC SM_Manager::GetAttributes(const char* relName, AttrCat*& attributes, int &att
     RelCat *relTmp;
     rec.GetData((char*&)relTmp);
     
-    attrCount = relTmp.attrNb;
+    attrCount = relTmp->attrNb;
 
     rc = fs1.CloseScan();
     if (rc) return rc;
