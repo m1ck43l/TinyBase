@@ -434,7 +434,7 @@ RC SM_Manager::Load(const char *relName,
     string line;
     
     char *pData;
-    int bitmapSize;
+    int bitmapSize = 0;
     
     int j = 0;
         
@@ -483,19 +483,18 @@ RC SM_Manager::Load(const char *relName,
                         break;
               
                     case STRING:
-                        string val_string;
-                        stream >> val_string;
-                        
+                        string val_string = value;
+                                                
                         // if entry is too long, let's truncate
                         if (val_string.length() > attrLength) {
                             val_string = val_string.substr(0, attrLength);
                         }
                         
                         if (val_string.length() < attrLength) {
-                            memcpy(pData + attributes[j].offset, &val_string, val_string.length());
+                            memcpy(pData + attributes[j].offset, val_string.c_str(), val_string.length());
                         }
                         else {
-                            memcpy(pData + attributes[j].offset, &val_string, attrLength);
+                            memcpy(pData + attributes[j].offset, val_string.c_str(), attrLength);
                         }
                         
                         break;
