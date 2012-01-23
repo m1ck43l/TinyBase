@@ -1,0 +1,27 @@
+Design Global:
+
+   -> Data structures
+
+Les structures de données choisies sont au nombre de deux. La première permet de représenter une relation (un tuble de la table relcat). Elle se compose de trois attributs qui nous permettent d'identifier le nom d'une relation, la taille des tuples de cette relation et le nombre d'attributs.
+La seconde structure importante est celle représentant un tuple de la table attrcat. Elle se compose du nom de la relation associée, du nom de l'attribut, de son type, de sa taille et enfin du numéro d’index associé.
+
+   -> Fonctions auxiliaires
+
+	Nous avons dû créer trois fonctions auxiliaires très importantes. Les deux premières permettent de récupérer un tuple spécifique de la table relact et de la table attrcat. Ces deux fonctions nous ont permis de factoriser beaucoup de code. La dernière fonction permet de récupérer un tableau des attributs d’une relation.
+
+   -> Gestion des catalogues
+
+	Les catalogues sont ouverts lors de l’ouverture d’une base de données et sont fermés à la fermeture de la même base de donnée. Afin de garantir l’intégrité des données en cas de fermeture non prévue du shell tinybase, nous forçons l’écriture des fichiers après leur modification. Ainsi lors de la création d’une table, les fichiers sont automatiquement réécris sur le disque.
+
+   -> Détection des erreurs
+
+	Notre fonction Load permet comme convenu l’ajout de tuples à partir d’un fichier de données. Nous avons choisi d’intégrer une vérification assez basique des tuples avant de les insérer. Ainsi nous ignorons les lignes vides et nous vérifions que le bon nombre d’attributs est présent. Si les attributs ne coïncident pas, on ignore simplement la ligne.
+
+Tests:
+
+	Pour effectuer les tests nous avons suivi une stratégie simple, tout d’abord à la main directement dans l’éditeur. Ensuite nous avons utilisé le programme sm_test.tester pour automatiser un bon nombre de tests et les vérifier. Ainsi nous avons pu essayer des ajouts “massifs” de données dans une relation en utilisant des boucles.
+	Nous avons de plus essayer d’introduire des erreurs dans les fichiers de test: lignes vides, virgules manquantes, … pour nous assurer de la robustesse de notre programme.
+
+Bug connus:
+
+	Pas de bug connu pour l’instant.

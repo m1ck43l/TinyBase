@@ -1,0 +1,44 @@
+Design global:
+
+	Le composant RM permet la gestion des pages / fichiers de données en s’appuyant sur le module PF. Nous avons choisi de représenter les différentes pages d’une relation à l’aide d’une liste chainée de pages. Ainsi la première page contiendra toujours un simple header avec un certain nombre d’informations utiles. Notamment le numéro de la première page ayant de l’espace libre. Par la suite chacune des pages contiendra le numéro de la page suivante dans son en-tête ainsi qu’une représentation de la map des records qu’elle contient.
+
+	Nous avons choisi de n’utiliser qu’une seule liste chainée pour le moment (liste des pages ayant de l’espace libre) mais nos structures possèdent les informations nécessaires pour utiliser deux listes doublement chainées. Cependant, arrivés à ce stade du développement nous n’avons pas trouvé pertinent avec notre architecture d’utiliser deux listes.
+
+
+Structures de données:
+	- File Header
+
+
+	Le FileHeader est une structure qui sera stockée dans la première page d’un fichier correspondant à une relation. Ainsi la page de numéro 0 contiendra toujours les informations propres à la relation. Les données de la structure sont: la taille d’un tuple, le nombre de tuples maximums qu’une page peut contenir (ce nombre est calculé en prenant en compte la taille du header de la page), le numéro de première page ayant de l’espace libre, le numéro de la première page pleine et enfin le nombre total de pages. Ce header est une description de la relation. Il est mis en mémoire dès l’ouverture du fichier.
+
+
+	- Page Header
+
+
+	Cet header permet de décrire le contenu d’une page. Il contient les numéros des pages précédentes et suivantes dans la liste chainée ainsi qu’une structure représentant le remplissage de la page : le bitmap. Une classe RM_PageHeader a été crée pour permettre de manipuler plus simplement ce type de header. 
+
+
+	- Bitmap
+
+
+	Le bitmap est un tableau de bits permettant de savoir rapidement si un slot est libre ou non. Il est représenté par un tableau de char. Un bit est à 1 si le slot est occupé et à 0 sinon. La classe BitmapManager permet de gérer le bitmap comme un simple tableau sans se soucier du tableau de char. Ainsi deux méthodes (clearSlot et setSlot) permettent de changer rapidement l’état du bitmap.
+
+
+	- Records
+
+
+	Les records correspondent à une classe à part entière une méthode Set a été rajoutée afin de permettre de gérer plus aisément la mémoire stockée.
+
+Phase de test :
+
+	Nous avons dû tout d’abord comprendre ce que l’on attendait de notre composante RM dans le fichier rm_test.cc. On a donc voulu d’abord tester nos codes erreurs. Nous provoquions les erreurs que nous voulions tester. Par exemple, nous avons essayé de fermer un fichier qui était déjà fermé, puis on vérifie que RC vaut bien RM_FILECLOSED.  
+	Ensuite nous nous sommes rendus compte qu’il fallait principalement tester si notre code effectuait bien ce qu’on lui demande sans qu’il ne renvoie d’erreurs. Nous avons donc utiliser les fonctions test1 et test2 qui vérifient les méthodes basiques de notre composante. C’est ainsi que l’on remarque que les tests s’effetuent parfaitement. Nous pouvons donc créer, ouvrir un fichier, et lui insérer des records.
+	A ce moment, on va donc se servir des autres fonctions proposées dans rm_test.cc pour vérifier l’intégrité de notre code. On va donc vérifier le fichier à l’aide de verifyFile. Nous rencontrons les premiers bugs. Ils sont simples à corriger, le plus dur fut de les traquer. Par exemple, placer des impressions à des endroits stratégiques du code se révèle bien utile.
+	Les petits bugs que nous avons su corriger furent des erreurs dans le nom des références, ou alors on ne renvoyait pas l’objet que l’on devait. On remarque enfin un premier Segmentation fault. Facile à corriger, on essayait d’écrire à partir d’un pointeur NULL. Nous avons finalement passé le test du verifyFile avec succès. 
+	Nous avons également montré que les records étaient bien écrits en mémoire à l’aide de la fonction printfile (dont il fallait changer le prototype). On remarque donc que les 200 Records que nous avons insérés sont bien présents, tous de la forme [a12, 12, 12.000].
+	Nous avions sous-estimé le temps qu’il fallait accorder à la partie des tests, car même si nous y avons passé du temps, il reste des bugs.
+
+Bugs connus :
+	
+	En effet, les bugs que nous rencontrons encore avec notre composante sont principalement d’ordre mémoire. Si nous effectuons trop de test en une fois, nous arrivons toujours à un segmentation fault. Par exemple si on crée un fichier, qu’on l’ouvre, qu’on insère 200 records, que l’on vérifie le fichier et qu’on le referme, le segmentation fault aura lieu dans le CloseFile. Il y a donc de la mémoire que l’on a allouée mais que l’on a pas encore libérée. Nous avons pourtant vérifié dès que nous pouvions libérer la mémoire nous le faisions.
+	Le dernier bug que l’on connaisse apparait dans le destructeur du RM_Manager, quel que soit le test que l’on effectue, il y a des fuites mémoires dans ce destructeur, et nous ne les avons toujours pas décelées, même à l’aide de valgrind.

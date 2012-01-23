@@ -1,0 +1,19 @@
+﻿Design global :
+
+
+Nous avons repris la même structure pour les pages que pour la composante RM. Les pages comportent des headers et il existe un fileheader pour l’index total. Chaque page représente soit un noeud soit un bucket qui contient les RIDs. Un noeud interne de l’arbre B+ se constitue de p clés et p+1 pointeurs, alors que les feuilles de l’arbre se constituent de p clés et p pointeurs (utiles, on peut toujours avoir p+1 pointeurs). Une clé est associée au pointeur vers le bucket qui contient les RID.
+Dans le bucket nous classons les RID sans aucun ordre (on ne peut pas le connaitre, à part si l’on met l’ordre sur pageNum, qui ne signifie finalement rien ici). Nous avons implémenter le support du chaînage des buckets, cela signifie que l’on est pas limité s’il y a un nombre assez important de RID qui correspondent à une clé. On ne peut également pas insérer un RID qui est déjà présent dans l’index, car autoriser les doublons peut prendre de la place inutilement dans l’index.
+
+
+Phase de test :
+
+
+        Nous cette fois-ci passé beaucoup plus de temps sur la phase de test, pour éviter de se retrouver avec des erreurs difficiles à corriger au dernier moment. Nous avions tout d’abord commis quelques erreurs semblables à la couche RM, notamment sur une copie de référence qui n’était jamais libérée, mais ce fut d’autant plus facile à trouver que nous l’avions déjà corriger sur la couche précédente.
+        Nous avons préférer implémenter d’abord l’insertion dans un arbre puis le scan, pour toute de suite vérifier ces classes. Nous n’avons pas commencer par finir d’implémenter la suppression d’une entrée. Nous nous sommes également occupés rapidement des erreurs quand nous passions des String en entrée, ce qui ne se rapporte finalement qu’à une erreur de typage.
+        Nous avons eu beaucoup de problèmes lors des splits des feuilles, la récursion marchait mais nous perdions systématiquement une erreur. Nous avions simplement oublié qu’une fois revenus dans la fonction (après la récursion) les headers de nos pages avaient évolués, il fallait donc les reprendre et les réécrire avant de retravailler sur leur valeur.
+        La suppression a été plus simple a tester, car nous avions bien étudier l’algorithme avant de l’implémenter pour ne pas faire d’erreur d’indice ou de récursion, ou de noms de variables. Nous n’avons malheureusement pas eu le temps de finir d’implémenter la suppression complète d’un arbre B+, la version actuelle se contente donc de la lazy deletion.
+        
+Bugs connus :
+
+
+        Il n’y a à notre connaissance aucun bug dans notre module. Nous avons tester les 4 tests (améliorés et renforcés) avec les types INT et FLOAT et 3 tests avec STRING, nous n’avons pas eu le temps de réécrire une fonction de test qui ressemblait au test 4 pour les string
