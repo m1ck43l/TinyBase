@@ -128,7 +128,7 @@ RC SM_Manager::CreateTable(const char *relName,
     // On cre le nouveau fichier
     rc = rmm.CreateFile(relName, recordLength);
     if(rc) return rc;
-    
+
     // Force pages
     relcat_fh.ForcePages();
     attrcat_fh.ForcePages();
@@ -280,7 +280,7 @@ RC SM_Manager::DropTable(const char *relName)
     // Force pages
 	relcat_fh.ForcePages();
 	attrcat_fh.ForcePages();
-    
+
     cout << "DropTable\n   relName=" << relName << "\n";
     return (0);
 }
@@ -413,22 +413,22 @@ RC SM_Manager::Load(const char *relName,
     RM_FileHandle rmfh;
     IX_IndexHandle ixih;
     RID rid;
-        
+
     if (relName == NULL || fileName == NULL)
         return SM_BADTABLE;
-    
+
     // open relation file
     rc = rmm.OpenFile(relName, rmfh);
     if(rc) return rc;
-        
+
     // have to get all attributes from relName
     int attrCount;
     DataAttrInfo *attributes;
     rc = GetAttributesFromRel(relName, attributes, attrCount);
     if (rc) return rc;
-    
+
     IX_IndexHandle *ixih_array = new IX_IndexHandle[attrCount];
-    
+
     // open index for each index
     for (int i = 0; i < attrCount; i++) {
     	if (attributes[i].indexNo != -1) {
@@ -436,127 +436,127 @@ RC SM_Manager::Load(const char *relName,
     		if (rc) return rc;
     	}
     }
-        
+
     // open file to read each line
     ifstream fichier;
     string line;
-    
+
     char *pData;
     int bitmapSize = 0;
-    
+
     int j = 0;
     int lineNb = 0;
-    
+
     fichier.open(fileName, ifstream::in);
     if (fichier.fail()) {
         fichier.close();
         return SM_BADTABLE;
     }
     else if (fichier.is_open()) {
-        
+
         for (int i = 0; i < attrCount; i++) {
             bitmapSize += attributes[i].attrLength;
         }
-        
+
         // Initialize pData
         pData = new char[bitmapSize];
-            
+
         while ( fichier.good() ) {
             // use catalog attrcat information to read tuples in file
             getline (fichier, line);
-            
+
             lineNb++;
-            
+
             // ignore blank lines
             if(line == "") continue;
-                        
+
             istringstream split(line);
             string value;
-                        
+
             memset(pData, 0, bitmapSize); // reinitialise le tuple temporaire
-                        
+
             j = 0;
             while (getline(split, value, ',')) {
-                
+
                 istringstream stream(value);
-                
+
                 unsigned int attrLength = attributes[j].attrLength;
-                
+
                 switch (attributes[j].attrType) {
-                    
+
                     case INT:
                         int val_int;
                         stream >> val_int;
                         memcpy(pData + attributes[j].offset, &val_int, attrLength);
                         break;
-              
+
                     case FLOAT:
                         float val_float;
                         stream >> val_float;
                         memcpy(pData + attributes[j].offset, &val_float, attrLength);
                         break;
-              
+
                     case STRING:
                         string val_string = value;
-                                                
+
                         // if entry is too long, let's truncate
                         if (val_string.length() > attrLength) {
                             val_string = val_string.substr(0, attrLength);
                         }
-                        
+
                         if (val_string.length() < attrLength) {
                             memcpy(pData + attributes[j].offset, val_string.c_str(), val_string.length());
                         }
                         else {
                             memcpy(pData + attributes[j].offset, val_string.c_str(), attrLength);
                         }
-                        
+
                         break;
                 }
                 j++;
             }
-            
+
             if(attrCount != j) {
-            	// Bad record 
+            	// Bad record
             	cout << "Found bad record at line " << lineNb << endl;
             	continue;
             }
-            
+
             // insert temp tuple into the relation
             rc = rmfh.InsertRec(pData, rid);
             if (rc) return rc;
 
             // make appropriate index entries for the tuple
             for (int i = 0; i < attrCount; i++) {
-            	if (attributes[i].indexNo != -1) { 
+            	if (attributes[i].indexNo != -1) {
 					rc = ixih_array[i].InsertEntry(pData, rid);
 					if (rc) return rc;
             	}
             }
-            
+
         }
     }
-    
+
     // close every indexes
     for (int i = 0; i < attrCount; i++) {
-    	if (attributes[i].indexNo != -1) { 
+    	if (attributes[i].indexNo != -1) {
 			rc = ixm.CloseIndex(ixih_array[i]);
 			if (rc) return rc;
     	}
     }
-    
+
     // close relation file
     rc = rmm.CloseFile(rmfh);
     if(rc) return rc;
-    
+
     // close fileName
     fichier.close();
-    
+
     delete[] ixih_array;
     delete[] attributes;
-    
+
     //****
-    
+
     cout << "Load\n"
          << "   relName =" << relName << "\n"
          << "   fileName=" << fileName << "\n";
@@ -700,7 +700,7 @@ RC SM_Manager::Help(const char *relName)
     int attrNb;
     RC rc;
 
-    rc = GetAttributesFromRel(relName, attributes, attrNb);
+    rc = GetAttributesFromRel("attrcat", attributes, attrNb);
     if(rc) return rc;
 
     Printer p(attributes, attrNb);
@@ -832,7 +832,7 @@ void SM_PrintError(RC rc)
 
 	else if ((rc >= START_IX_WARN && rc <= IX_LASTWARN) || (-rc >= -START_IX_ERR && -rc <= -IX_LASTERROR))
 		IX_PrintError(rc);
-	
+
 	else if ((rc >= START_PF_WARN && rc <= PF_LASTWARN) ||
 		 (-rc >= -START_PF_ERR && -rc < -PF_LASTERROR) ||
 			  (rc == PF_UNIX))
