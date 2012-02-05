@@ -92,10 +92,13 @@ public:
     RC GetRid (RID &rid) const;
     RC Set(char*,int);
     RC SetRID(RID &rid);
+
+    int GetLength() const;
 private:
     char *pData;
     RID rid;
     bool bIsValid;
+    int length;
 };
 
 //

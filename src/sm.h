@@ -70,6 +70,11 @@ public:
     RC Set        (const char *paramName,         // set parameter to
                    const char *value);            //   value
 
+    // Construction de DataAttrInfo
+    RC GetAttributesFromRel(const char* relName, DataAttrInfo* & attributes, int& attrNb) const;
+
+    // Recupere un tuple de la table attrcat
+	RC GetAttrTpl(const char* relName, const char* attrName, AttrCat& attrTpl, RID& rid) const;
 private:
     bool bIsOpen;
     IX_Manager& ixm;
@@ -83,11 +88,9 @@ private:
     // Recupere un tuple de la table relcat
     RC GetRelTpl(const char* relName, RelCat& relTpl, RID& rid) const;
 
-    // Recupere un tuple de la table attrcat
-    RC GetAttrTpl(const char* relName, const char* attrName, AttrCat& attrTpl, RID& rid) const;
 
-    // Construction de DataAttrInfo
-    RC GetAttributesFromRel(const char* relName, DataAttrInfo* & attributes, int& attrNb) const;
+
+
 };
 
 //

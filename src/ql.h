@@ -16,6 +16,7 @@
 #include "rm.h"
 #include "ix.h"
 #include "sm.h"
+#include "comparator.h"
 
 #undef min
 #undef max
@@ -75,4 +76,6 @@ void QL_PrintError(RC rc);
 #define QL_INVALIDATTR			(START_SM_WARN + 2)
 #define QL_ATTRNOTFOUND			(START_SM_WARN + 3)
 #define QL_WRONGTYPEWHERECLAUSE	(START_SM_WARN + 4)
+#define QL_ITNOTOPEN			(START_SM_WARN + 5)
+
 #endif

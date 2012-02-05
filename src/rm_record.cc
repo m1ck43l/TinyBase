@@ -19,6 +19,7 @@ RC RM_Record::Set(char* pData2, int recordSize) {
     if (pData != NULL)
         delete[] pData;
 
+    length = recordSize;
     pData = new char[recordSize];
     memcpy(pData, pData2, recordSize);
     return 0;
@@ -49,4 +50,8 @@ RC RM_Record::GetRid(RID &rid) const {
     }
 
     return RM_INVALIDRECORD;
+}
+
+int RM_Record::GetLength() const {
+	return length;
 }

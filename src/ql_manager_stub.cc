@@ -220,10 +220,11 @@ RC QL_Manager::checkSelAttrs (int nSelAttrs, const RelAttr selAttrs[]) {
 		return 0;
 	}
 
+	vector<string>::iterator it;
 	int i = 0;
 	const char * relName;
 	for (i = 0; i < nSelAttrs; i++) {
-		// On recupere la nom de la relation
+		// On recupere le nom de la relation
 		if (selAttrs[i].relName == NULL) {
 			if (relationsMap.size() > 1) {
 				return QL_INVALIDATTR;
@@ -232,6 +233,12 @@ RC QL_Manager::checkSelAttrs (int nSelAttrs, const RelAttr selAttrs[]) {
 		}
 		else  {
 			relName = selAttrs[i].relName;
+		}
+
+		// On vérifie que la relation existe
+		it = find(relationsMap.begin(), relationsMap.end(), relName);
+		if (it == relationsMap.end()) {
+			return QL_NOTBLFOUND;
 		}
 
 		// On vérifie que l'attribut existe
@@ -258,6 +265,7 @@ RC QL_Manager::checkWhereAttrs (int nConditions, const Condition conditions[]) {
 	// Quand on arrive ici la map des relations a été construite
 	// on peut donc utiliser relationsMap
 
+	vector<string>::iterator it;
 	int i = 0;
 	const char * relNameL;
 	const char * relNameR;
@@ -271,6 +279,12 @@ RC QL_Manager::checkWhereAttrs (int nConditions, const Condition conditions[]) {
 		}
 		else  {
 			relNameL = conditions[i].lhsAttr.relName;
+		}
+
+		// On vérifie que la relation existe
+		it = find(relationsMap.begin(), relationsMap.end(), relNameL);
+		if (it == relationsMap.end()) {
+			return QL_NOTBLFOUND;
 		}
 
 		// On vérifie que l'attribut gauche existe
@@ -292,6 +306,12 @@ RC QL_Manager::checkWhereAttrs (int nConditions, const Condition conditions[]) {
 			}
 			else  {
 				relNameR = conditions[i].rhsAttr.relName;
+			}
+
+			// On vérifie que la relation existe
+			it = find(relationsMap.begin(), relationsMap.end(), relNameR);
+			if (it == relationsMap.end()) {
+				return QL_NOTBLFOUND;
 			}
 
 			// On vérifie que l'attribut droite existe
