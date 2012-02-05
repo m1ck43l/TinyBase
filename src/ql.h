@@ -8,6 +8,7 @@
 #ifndef QL_H
 #define QL_H
 
+
 #include <stdlib.h>
 #include <string.h>
 #include "redbase.h"
@@ -15,6 +16,11 @@
 #include "rm.h"
 #include "ix.h"
 #include "sm.h"
+
+#undef min
+#undef max
+#include <vector>
+#include <algorithm>
 
 //
 // QL_Manager: query language (DML)
@@ -48,6 +54,15 @@ public:
         const Condition conditions[]);   // conditions in where clause
 
 private:
+    RC checkRelations(int nRelations, const char * const relations[]);
+    RC checkSelAttrs (int nSelAttrs, const RelAttr selAttrs[]);
+    RC checkWhereAttrs (int nConditions, const Condition conditions[]);
+
+    SM_Manager &smm;
+    IX_Manager &ixm;
+    RM_Manager &rmm;
+
+    std::vector<std::string> relationsMap;
 };
 
 //
@@ -55,4 +70,9 @@ private:
 //
 void QL_PrintError(RC rc);
 
+#define QL_NOTBLFOUND       	(START_SM_WARN + 0)
+#define QL_RELDBLFOUND			(START_SM_WARN + 1)
+#define QL_INVALIDATTR			(START_SM_WARN + 2)
+#define QL_ATTRNOTFOUND			(START_SM_WARN + 3)
+#define QL_WRONGTYPEWHERECLAUSE	(START_SM_WARN + 4)
 #endif
