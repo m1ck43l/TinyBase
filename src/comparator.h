@@ -1,0 +1,28 @@
+/*
+ * comparator.h
+ *
+ *  Created on: Feb 5, 2012
+ *      Author: mickael
+ */
+
+#ifndef COMPARATOR_H_
+#define COMPARATOR_H_
+
+#include "ql.h"
+
+class Comparator {
+public:
+	Comparator(AttrType attrType, int attrLength, int attrOffset, CompOp op, void* pData);
+	virtual ~Comparator();
+
+	bool Compare(const char* pData) const;
+
+private:
+	AttrType attrType;
+	int attrLength;
+	int attrOffset;
+	CompOp op;
+	void* value;
+};
+
+#endif /* COMPARATOR_H_ */
