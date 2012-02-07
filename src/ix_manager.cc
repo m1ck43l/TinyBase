@@ -50,8 +50,6 @@ RC IX_Manager::CreateIndex (const char *fileName, int indexNo, AttrType attrType
     ix_fileheader.numRacine = -1;
     ix_fileheader.type = attrType;
 
-    // TODO
-
     // Creation de la premiere page
     PF_PageHandle pf_pagehandle;
     rc = pf_filehandle.AllocatePage(pf_pagehandle);

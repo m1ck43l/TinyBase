@@ -22,7 +22,7 @@ public:
 	Tuple(const Tuple& tpl) : length(tpl.length), rid(tpl.rid) {
 		pData = new char[length];
 		memcpy(pData, tpl.pData, length);
-		this->SetAttributes(tpl.GetAttributes());
+		this->SetAttributes(tpl.pAttrs);
 	}
 
 	~Tuple() {
@@ -80,6 +80,14 @@ public:
 
 	virtual DataAttrInfo* getRelAttr() { return attrs; }
 	virtual int getAttrCount() { return attrCount; }
+
+	virtual int getLength() {
+		int i = 0, length = 0;
+		for(i = 0; i < attrCount; i++) {
+			length += attrs[i].attrLength;
+		}
+		return length;
+	}
 
 protected:
 	bool bIsOpen;
