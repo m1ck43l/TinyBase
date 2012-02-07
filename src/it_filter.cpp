@@ -48,7 +48,7 @@ RC IT_Filter::Close() {
 	return 0;
 }
 
-RC IT_Filter::GetNext(Tuple& tpl) {
+RC IT_Filter::GetNext(RM_Record& tpl) {
 	if(!bIsOpen) {
 		return QL_ITNOTOPEN;
 	}

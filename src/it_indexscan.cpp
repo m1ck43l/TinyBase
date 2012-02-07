@@ -65,14 +65,13 @@ RC IT_IndexScan::Close() {
 	return 0;
 }
 
-RC IT_IndexScan::GetNext(Tuple& outRec) {
+RC IT_IndexScan::GetNext(RM_Record& rec) {
 	RC rc;
 
 	if(!bIsOpen) {
 		return QL_ITNOTOPEN;
 	}
 
-	RM_Record rec;
 	RID rid;
 
 	rc = ixis.GetNextEntry(rid);
@@ -84,18 +83,6 @@ RC IT_IndexScan::GetNext(Tuple& outRec) {
 
 	rc = rmfh.GetRec(rid, rec);
 	if (rc != 0 ) return rc;
-
-	// On recupere le record
-	char * pData;
-	rec.GetData(pData);
-	rec.GetRid(rid);
-
-	Tuple tpl(rec.GetLength());
-	tpl.Set(pData);
-	tpl.SetRID(rid);
-	tpl.SetAttributes(attrs);
-
-	outRec(tpl);
 
 	return rc;
 }

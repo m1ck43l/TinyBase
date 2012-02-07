@@ -48,14 +48,13 @@ RC IT_FileScan::Open() {
 	return 0;
 }
 
-RC IT_FileScan::GetNext(Tuple& outRec) {
+RC IT_FileScan::GetNext(RM_Record& rec) {
 	RC rc;
 
 	if(!bIsOpen) {
 		return QL_ITNOTOPEN;
 	}
 
-	RM_Record rec;
 	RID rid;
 
 	rc = rmfs.GetNextRec(rec);
@@ -64,18 +63,6 @@ RC IT_FileScan::GetNext(Tuple& outRec) {
 
 	if (rc == RM_EOF)
 		return QL_EOF;
-
-	// On recupere le record
-	char * pData;
-	rec.GetData(pData);
-	rec.GetRid(rid);
-
-	Tuple tpl(rec.GetLength());
-	tpl.Set(pData);
-	tpl.SetRID(rid);
-	tpl.SetAttributes(attrs);
-
-	outRec(tpl);
 
 	return rc;
 }
