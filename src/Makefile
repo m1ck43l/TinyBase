@@ -41,7 +41,8 @@ RM_SOURCES     = rm_rid.cc rm_record.cc rm_manager.cc rm_filescan.cc \
                  rm_pageheader.cc
 IX_SOURCES     = ix_manager.cc ix_indexhandle.cc ix_indexscan.cc ix_error.cc
 SM_SOURCES     = sm_manager.cc printer.cc
-QL_SOURCES     = ql_manager_stub.cc
+QL_SOURCES     = ql_manager.cc it_filescan.cc it_indexscan.cc it_filter.cc  \
+				 comparator.cc it_nestedloopjoin.cc it_projection.cc
 UTILS_SOURCES  = dbcreate.cc dbdestroy.cc tinybase.cc
 PARSER_SOURCES = scan.c parse.c nodes.c interp.c
 TESTER_SOURCES = pf_test1.cc pf_test2.cc pf_test3.cc rm_test.cc ix_test.cc parser_test.cc
