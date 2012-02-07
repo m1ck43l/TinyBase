@@ -8,23 +8,11 @@
 #include "it_filescan.h"
 
 IT_FileScan::IT_FileScan(RM_Manager rmm, SM_Manager smm, const char * _relName,
-						 Condition scanCond, int nbOtherCond, Condition _otherConds[])
-					: rmm(&rmm), smm(&smm), relName(_relName), scanCond(scanCond), nbOtherCond(nbOtherCond) {
-
-	// Plusieurs cas sont possibles lorsque l'on va ouvrir l'iterateur
-	// Soit on possède une condition sur l'attribut que l'on scan -> scanCond
-	// Soit non -> otherConds
-
-	otherConds = new Condition[nbOtherCond];
-
-	int i = 0;
-	for(i = 0; i < nbOtherCond; i++) {
-		otherConds[i] = _otherConds[i];
-	}
+						 Condition scanCond)
+					: rmm(&rmm), smm(&smm), relName(_relName), scanCond(scanCond) {
 }
 
 IT_FileScan::~IT_FileScan() {
-	delete[] otherConds;
 	delete[] attrs;
 }
 
@@ -71,51 +59,25 @@ RC IT_FileScan::GetNext(Tuple& outRec) {
 
 	RM_Record rec;
 	RID rid;
-	bool trouve = false;
 
-	while (!trouve) {
-		rc = rmfs.GetNextRec(rec);
-		if (rc != RM_EOF && rc != 0)
-			return rc;
+	rc = rmfs.GetNextRec(rec);
+	if (rc != RM_EOF && rc != 0)
+		return rc;
 
-		if (rc == RM_EOF)
-			break;
+	if (rc == RM_EOF)
+		return QL_EOF;
 
-		// On recupere le record
-		char * pData;
-		rec.GetData(pData);
-		rec.GetRid(rid);
+	// On recupere le record
+	char * pData;
+	rec.GetData(pData);
+	rec.GetRid(rid);
 
-		// On doit maintenant vérifier si ce record satifait toutes les conditions
-		bool isRecordValid = true;
-		for (int i = 0; i < nbOtherCond; i++) {
-			Condition currentCond = otherConds[i];
-			AttrCat attrCat;
-			RID tmpRid;
+	Tuple tpl(rec.GetLength());
+	tpl.Set(pData);
+	tpl.SetRID(rid);
+	tpl.SetAttributes(attrs);
 
-			rc = smm->GetAttrTpl(relName, currentCond.lhsAttr.attrName, attrCat, tmpRid);
-			if (rc) return rc;
-
-			// On crée le comparateur
-			Comparator comp(attrCat.attrType, attrCat.attrLength, attrCat.offset, currentCond.op, currentCond.rhsValue.data);
-
-			if(!comp.Compare(pData)) {
-				isRecordValid = false;
-				break;
-			}
-		}
-
-		if(isRecordValid) {
-			Tuple tpl(rec.GetLength());
-			tpl.Set(pData);
-			tpl.SetRID(rid);
-			tpl.SetAttributes(attrs);
-
-			outRec(tpl);
-
-			trouve = true;
-		}
-	}
+	outRec(tpl);
 
 	return rc;
 }

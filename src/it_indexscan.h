@@ -14,7 +14,7 @@
 class IT_IndexScan : public virtual QL_Iterator {
 public:
 	IT_IndexScan(RM_Manager rmm, SM_Manager smm, const char * _relName, const char * _attrName,
-			 Condition scanCond, int nbOtherCond, Condition _otherConds[]);
+			 Condition scanCond);
 	virtual ~IT_IndexScan();
 private:
 	const char * relName;
@@ -30,8 +30,6 @@ private:
 	IX_Manager *ixm;
 
 	Condition& scanCond;
-	int nbOtherCond;
-	Condition* otherConds;
 };
 
 #endif /* IT_INDEXSCAN_H_ */
