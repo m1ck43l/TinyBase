@@ -15,7 +15,7 @@ public:
 	Comparator(AttrType attrType, int attrLength, int attrOffset, CompOp op, void* pData);
 	virtual ~Comparator();
 
-	bool Compare(const char* pData) const;
+	bool Compare(const void* pData) const;
 
 private:
 	AttrType attrType;

@@ -78,5 +78,6 @@ void QL_PrintError(RC rc);
 #define QL_WRONGTYPEWHERECLAUSE	(START_SM_WARN + 4)
 #define QL_ITNOTOPEN			(START_SM_WARN + 5)
 #define QL_EOF					(START_SM_WARN + 6)
+#define QL_ITALRDYOPEN			(START_SM_WARN + 7)
 
 #endif

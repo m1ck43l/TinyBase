@@ -26,10 +26,8 @@ RC IT_FileScan::Open() {
 	AttrCat attrCat;
 
 	// Si on a une condition sur le scan on récupère l'attribut
-	if(scanCond.rhsValue != NULL) {
-		rc = smm->GetAttrTpl(relName, scanCond.lhsAttr.attrName, attrCat, rid);
-		if(rc) return rc;
-	}
+	rc = smm->GetAttrTpl(relName, scanCond.lhsAttr.attrName, attrCat, rid);
+	if(rc) return rc;
 
 	rc = smm->GetAttributesFromRel(relName, attrs, attrCount);
 	if(rc) return rc;

@@ -17,7 +17,7 @@ Comparator::Comparator(AttrType _attrType, int _attrLength, int _attrOffset, Com
 
 Comparator::~Comparator() {}
 
-bool Comparator::Compare(const char* pData) const {
+bool Comparator::Compare(const void* pData) const {
 	if(op == NO_OP || value == NULL)
 		return true;
 
