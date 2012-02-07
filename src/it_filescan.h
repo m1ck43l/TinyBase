@@ -16,13 +16,17 @@ public:
 	IT_FileScan(RM_Manager rmm, SM_Manager smm, const char * relName, Condition scanCond);
 	virtual ~IT_FileScan();
 
+	RC Open();
+	RC GetNext(RM_Record& outRec);
+	RC Close();
+
 private:
+	RM_Manager *rmm;
+	SM_Manager *smm;
+
 	const char * relName;
 	RM_FileHandle rmfh;
 	RM_FileScan rmfs;
-
-	RM_Manager *rmm;
-	SM_Manager *smm;
 
 	Condition& scanCond;
 };

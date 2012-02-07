@@ -12,7 +12,7 @@
 
 class Comparator {
 public:
-	Comparator(AttrType attrType, int attrLength, int attrOffset, CompOp op, void* pData);
+	Comparator(AttrType attrType, int attrLength, int attrOffset, CompOp op, char* pData);
 	virtual ~Comparator();
 
 	bool Compare(const void* pData) const;
@@ -22,7 +22,7 @@ private:
 	int attrLength;
 	int attrOffset;
 	CompOp op;
-	void* value;
+	const void* value;
 };
 
 #endif /* COMPARATOR_H_ */

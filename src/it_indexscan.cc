@@ -7,7 +7,7 @@
 
 #include "it_indexscan.h"
 
-IT_IndexScan::IT_IndexScan(RM_Manager rmm, SM_Manager smm, const char * _relName, const char * _indexName,
+IT_IndexScan::IT_IndexScan(RM_Manager rmm, SM_Manager smm, IX_Manager ixm, const char * _relName, const char * _indexName,
 		 Condition scanCond)
 	: rmm(&rmm), smm(&smm), ixm(&ixm), relName(_relName), indexName(_indexName), scanCond(scanCond) {
 }
