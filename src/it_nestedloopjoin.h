@@ -13,16 +13,21 @@
 
 class IT_NestedLoopJoin : public virtual QL_Iterator {
 public:
-	IT_NestedLoopJoin(QL_Iterator* left, QL_Iterator* right, Condition _cond)
-			: LeftIterator(left), RightIterator(right), cond(_cond), leftTpl(left->getLength()), rightTpl(right->getLength()) {};
+	IT_NestedLoopJoin(QL_Iterator* left, QL_Iterator* right, Condition _cond);
 	virtual ~IT_NestedLoopJoin();
 
 private:
 	QL_Iterator* LeftIterator;
 	QL_Iterator* RightIterator;
 
+	CompOp op;
+	DataAttrInfo leftAttr, rightAttr;
+
 	Condition cond;
-	Tuple leftTpl, rightTpl;
+
+	int lengthL, lengthR;
+	char* pLeft;
+	RM_Record pLeftRec;
 };
 
 #endif /* IT_NESTEDLOOPJOIN_H_ */
