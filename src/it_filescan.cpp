@@ -62,7 +62,7 @@ RC IT_FileScan::Open() {
 	return 0;
 }
 
-RC IT_FileScan::GetNext(RM_Record& outRec) {
+RC IT_FileScan::GetNext(Tuple& outRec) {
 	RC rc;
 
 	if(!bIsOpen) {
@@ -106,9 +106,13 @@ RC IT_FileScan::GetNext(RM_Record& outRec) {
 		}
 
 		if(isRecordValid) {
-			outRec.rid = rid;
-			outRec.bIsValid = true;
-			outRec.Set(pData, rec.GetLength());
+			Tuple tpl(rec.GetLength());
+			tpl.Set(pData);
+			tpl.SetRID(rid);
+			tpl.SetAttributes(attrs);
+
+			outRec(tpl);
+
 			trouve = true;
 		}
 	}
