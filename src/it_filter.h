@@ -13,7 +13,7 @@
 
 class IT_Filter : public virtual QL_Iterator {
 public:
-	IT_Filter(QL_Iterator* it, Condition& cond);
+	IT_Filter(QL_Iterator* it, const Condition& cond);
 	virtual ~IT_Filter();
 
 	RC Open();
@@ -21,7 +21,7 @@ public:
 	RC Close();
 private:
 	QL_Iterator* it;
-	Condition* cond;
+	const Condition* cond;
 
 	DataAttrInfo leftAttr;
 };

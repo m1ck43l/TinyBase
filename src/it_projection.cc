@@ -25,6 +25,7 @@ IT_Projection::IT_Projection(QL_Iterator* it, int nSelAttrs, const RelAttr selAt
 
 IT_Projection::~IT_Projection() {
 	delete[] projAttrs;
+	delete it;
 }
 
 RC IT_Projection::Open() {

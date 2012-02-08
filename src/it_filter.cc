@@ -7,10 +7,17 @@
 
 #include "it_filter.h"
 
-IT_Filter::IT_Filter(QL_Iterator* it, Condition& cond) : it(it), cond(&cond) {
+IT_Filter::IT_Filter(QL_Iterator* it, const Condition& _cond) : it(it), cond(&_cond) {
+	attrs = it->getRelAttr();
+	for(int i = 0; i < it->getAttrCount(); i++) {
+		if (strcmp(cond->lhsAttr.relName, attrs[i].relName) == 0 && strcmp(cond->lhsAttr.attrName, attrs[i].attrName) == 0) {
+			leftAttr = attrs[i];
+		}
+	}
 }
 
 IT_Filter::~IT_Filter() {
+	delete it;
 }
 
 RC IT_Filter::Open() {
@@ -19,13 +26,6 @@ RC IT_Filter::Open() {
 	}
 	RID rid;
 	RC rc;
-
-	DataAttrInfo* attrs = it->getRelAttr();
-	for(int i = 0; i < it->getAttrCount(); i++) {
-		if (strcmp(cond->lhsAttr.relName, attrs[i].relName) == 0 && strcmp(cond->lhsAttr.attrName, attrs[i].attrName) == 0) {
-			leftAttr = attrs[i];
-		}
-	}
 
 	rc = it->Open();
 	if(rc) return rc;

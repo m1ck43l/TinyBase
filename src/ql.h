@@ -23,6 +23,8 @@
 #include <vector>
 #include <algorithm>
 
+#include "ql_iterator.h"
+
 //
 // QL_Manager: query language (DML)
 //
@@ -58,6 +60,11 @@ private:
     RC checkRelations(int nRelations, const char * const relations[]);
     RC checkSelAttrs (int nSelAttrs, const RelAttr selAttrs[]);
     RC checkWhereAttrs (int nConditions, const Condition conditions[]);
+
+    // DeletePlan
+    RC DeletePlan(QL_Iterator*& racine, const char *relName,
+			int nConditions, const Condition conditions[]);
+    bool IsBetter(AttrType a, AttrType b);
 
     SM_Manager &smm;
     IX_Manager &ixm;

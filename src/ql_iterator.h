@@ -13,7 +13,7 @@
 class QL_Iterator {
 public:
 	QL_Iterator():bIsOpen(false) {};
-	virtual ~QL_Iterator();
+	virtual ~QL_Iterator() {};
 
 	virtual RC Open() = 0;
 	virtual RC GetNext(RM_Record& outRec) = 0;

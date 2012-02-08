@@ -88,6 +88,8 @@ IT_NestedLoopJoin::IT_NestedLoopJoin(QL_Iterator* _left, QL_Iterator* _right, Co
 
 IT_NestedLoopJoin::~IT_NestedLoopJoin() {
 	delete[] attrs;
+	delete LeftIterator;
+	delete RightIterator;
 }
 
 RC IT_NestedLoopJoin::Open() {
