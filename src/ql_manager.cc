@@ -101,15 +101,112 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs[],
 RC QL_Manager::Insert(const char *relName,
                       int nValues, const Value values[])
 {
+    RC rc;
+    RM_FileHandle rmfh;
+    RID rid;
+    
     int i;
-
-    cout << "Insert\n";
-
-    cout << "   relName = " << relName << "\n";
-    cout << "   nValues = " << nValues << "\n";
-    for (i = 0; i < nValues; i++)
-        cout << "   values[" << i << "]:" << values[i] << "\n";
-
+    
+    // cout << "Insert\n";
+    //     
+    //     cout << "   relName = " << relName << "\n";
+    //     cout << "   nValues = " << nValues << "\n";
+    //     for (i = 0; i < nValues; i++)
+    //         cout << "   values[" << i << "]:" << values[i] << "\n";
+    
+    // request : INSERT INTO relname VALUES value[Ø], value[1], value[2]
+    
+    // verifications
+    
+    // 1. verifier que la table existe
+    
+    // open relation file
+    rc = rmm->OpenFile(relName, rmfh);
+    if(rc) return rc;
+    
+    // have to get all attributes from relName
+    int attrCount;
+    DataAttrInfo *attributes;
+    rc = smm->GetAttributesFromRel(relName, attributes, attrCount);
+    if (rc) return rc;
+    
+    // 2. verifier que le nombre de valeurs est le bon
+    
+    if (attrCount != nValues) {
+        delete [] attributes;
+        return QL_INVALIDATTR;
+    }
+    
+    // 3. verifier que le type des valeur est bon
+    
+    for (i = 0; i < attrCount; i++) {
+        if (attributes[i].attrType != values[i].type) {
+            delete [] attributes;
+            return QL_INVALIDATTR;
+        }
+    }
+    
+    IX_IndexHandle *ixih_array = new IX_IndexHandle[attrCount];
+    
+    // open index for each index
+    for (i = 0; i < attrCount; i++) {
+        if (attributes[i].indexNo != -1) {
+            rc = ixm->OpenIndex(relName, attributes[i].indexNo, ixih_array[i]);
+            if (rc) return rc;
+        }
+    }
+    
+    char *pData;
+    int bitmapSize = 0;
+    
+    for (int i = 0; i < attrCount; i++) {
+        bitmapSize += attributes[i].attrLength;
+    }
+    
+    // Initialize pData
+    pData = new char[bitmapSize];
+    memset(pData, 0, bitmapSize); // reinitialise le tuple temporaire
+    
+    for (i = 0; i < attrCount; i++) {
+        unsigned int attrLength = attributes[i].attrLength;
+        
+        // est-ce que le parseur formatte bien les entrees comme il faut ? (par ex. tronquer string trop long)
+        memcpy(pData + attributes[i].offset, values[i].data, attrLength);
+    }
+    
+    // insert temp tuple into the relation
+    rc = rmfh.InsertRec(pData, rid);
+    if (rc) return rc;
+    
+    // make appropriate index entries for the tuple
+    for (int i = 0; i < attrCount; i++) {
+        if (attributes[i].indexNo != -1) {
+            rc = ixih_array[i].InsertEntry(pData, rid);
+            if (rc) return rc;
+        }
+    }
+    
+    // Printer
+    Printer p(attributes, attrCount);
+	p.PrintHeader(cout);
+    p.Print(cout, pData);
+    p.PrintFooter(cout);
+    
+    // close every indexes
+    for (int i = 0; i < attrCount; i++) {
+        if (attributes[i].indexNo != -1) {
+            rc = ixm->CloseIndex(ixih_array[i]);
+            if (rc) return rc;
+        }
+    }
+    
+    // close relation file
+    rc = rmm->CloseFile(rmfh);
+    if(rc) return rc;
+    
+    delete[] ixih_array;
+    delete[] attributes;
+    
     return 0;
 }
 
