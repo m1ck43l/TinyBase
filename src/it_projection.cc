@@ -8,23 +8,39 @@
 #include "it_projection.h"
 
 IT_Projection::IT_Projection(QL_Iterator* it, int nSelAttrs, const RelAttr selAttrs[]) : it(it) {
-    attrCount = nSelAttrs;
 	length = 0;
 
-    attrs = new DataAttrInfo[attrCount];
-    projAttrs = new DataAttrInfo[attrCount];
-    DataAttrInfo* tempattrs = it->getRelAttr();
-    for(int i = 0; i < attrCount; i++) {
-		for(int j = 0; j < it->getAttrCount(); j++) {
-            if (((selAttrs[i].relName == NULL) || (selAttrs[i].relName != NULL && strcmp(selAttrs[i].relName, tempattrs[j].relName) == 0))
-                    && strcmp(selAttrs[i].attrName, tempattrs[j].attrName) == 0) {
-                projAttrs[i] = tempattrs[j];
+	// Select *
+	if(nSelAttrs == 1 && strcmp(selAttrs[0].attrName, "*") == 0) {
+		attrCount = it->getAttrCount();
+		attrs = new DataAttrInfo[attrCount];
+		projAttrs = new DataAttrInfo[attrCount];
 
-                // construction de attrs reel
-                attrs[i] = tempattrs[j];
-                attrs[i].offset = length;
+		DataAttrInfo* tempattrs = it->getRelAttr();
+		for(int i = 0; i < attrCount; i++) {
+			projAttrs[i] = tempattrs[i];
+			attrs[i] = tempattrs[i];
+			length += tempattrs[i].attrLength;
+		}
 
-                length += tempattrs[j].attrLength;
+	} else {
+		attrCount = nSelAttrs;
+		attrs = new DataAttrInfo[attrCount];
+		projAttrs = new DataAttrInfo[attrCount];
+
+		DataAttrInfo* tempattrs = it->getRelAttr();
+		for(int i = 0; i < attrCount; i++) {
+			for(int j = 0; j < it->getAttrCount(); j++) {
+				if (((selAttrs[i].relName == NULL) || (selAttrs[i].relName != NULL && strcmp(selAttrs[i].relName, tempattrs[j].relName) == 0))
+						&& strcmp(selAttrs[i].attrName, tempattrs[j].attrName) == 0) {
+					projAttrs[i] = tempattrs[j];
+
+					// construction de attrs reel
+					attrs[i] = tempattrs[j];
+					attrs[i].offset = length;
+
+					length += tempattrs[j].attrLength;
+				}
 			}
 		}
 	}
