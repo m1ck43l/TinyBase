@@ -12,11 +12,18 @@ IT_Projection::IT_Projection(QL_Iterator* it, int nSelAttrs, const RelAttr selAt
 	length = 0;
 
     attrs = new DataAttrInfo[attrCount];
+    projAttrs = new DataAttrInfo[attrCount];
+    DataAttrInfo* tempattrs = it->getRelAttr();
     for(int i = 0; i < attrCount; i++) {
-        DataAttrInfo* tempattrs = it->getRelAttr();
 		for(int j = 0; j < it->getAttrCount(); j++) {
-            if (strcmp(selAttrs[i].relName, tempattrs[j].relName) == 0 && strcmp(selAttrs[i].attrName, tempattrs[j].attrName) == 0) {
+            if (((selAttrs[i].relName == NULL) || (selAttrs[i].relName != NULL && strcmp(selAttrs[i].relName, tempattrs[j].relName) == 0))
+                    && strcmp(selAttrs[i].attrName, tempattrs[j].attrName) == 0) {
+                projAttrs[i] = tempattrs[j];
+
+                // construction de attrs reel
                 attrs[i] = tempattrs[j];
+                attrs[i].offset = length;
+
                 length += tempattrs[j].attrLength;
 			}
 		}
@@ -25,6 +32,7 @@ IT_Projection::IT_Projection(QL_Iterator* it, int nSelAttrs, const RelAttr selAt
 
 IT_Projection::~IT_Projection() {
     delete[] attrs;
+    delete[] projAttrs;
 	delete it;
 }
 
@@ -71,10 +79,11 @@ RC IT_Projection::GetNext(RM_Record& tpl) {
 	if(rc) return rc;
 
 	int offset = 0;
+
 	char* pDataNew = new char[length];
     for(int i = 0; i < attrCount; i++) {
-        memcpy(pDataNew + offset, pData + attrs[i].offset, attrs[i].attrLength);
-        offset += attrs[i].attrLength;
+        memcpy(pDataNew + offset, pData + projAttrs[i].offset, projAttrs[i].attrLength);
+        offset += projAttrs[i].attrLength;
 	}
 
 	rc = tpl.Set(pDataNew, length);

@@ -34,6 +34,8 @@ private:
 	IX_IndexScan ixis;
 
 	const Condition* scanCond;
+    RID rid;
+    AttrCat attrCat;
 };
 
 #endif /* IT_INDEXSCAN_H_ */

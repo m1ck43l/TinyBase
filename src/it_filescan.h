@@ -29,6 +29,8 @@ private:
 	RM_FileScan rmfs;
 
 	const Condition* scanCond;
+    RID rid;
+    AttrCat attrCat;
 };
 
 #endif /* IT_FILESCAN_H_ */

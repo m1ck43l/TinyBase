@@ -11,6 +11,9 @@ IT_IndexScan::IT_IndexScan(RM_Manager* rmm, SM_Manager* _smm, IX_Manager* ixm, c
 		 const Condition& _scanCond, RC& rc)
 	: rmm(rmm), smm(_smm), ixm(ixm), relName(_relName), indexName(_indexName), scanCond(&_scanCond) {
 	rc = smm->GetAttributesFromRel(relName, attrs, attrCount);
+    rc = smm->GetAttrTpl(relName, indexName, attrCat, rid);
+
+    std::cout << "indexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" << std::endl;
 }
 
 IT_IndexScan::~IT_IndexScan() {
@@ -23,11 +26,6 @@ RC IT_IndexScan::Open() {
 	}
 
 	RC rc;
-	RID rid;
-	AttrCat attrCat;
-
-	rc = smm->GetAttrTpl(relName, indexName, attrCat, rid);
-	if(rc) return rc;
 
 	rc = rmm->OpenFile(relName, rmfh);
 	if(rc) return rc;

@@ -72,14 +72,20 @@ IT_NestedLoopJoin::IT_NestedLoopJoin(QL_Iterator* _left, QL_Iterator* _right, co
 
 	DataAttrInfo* left = LeftIterator->getRelAttr();
 	for (i = 0; i < LeftIterator->getAttrCount(); i++) {
+        std::cout << "left[" << i << "] = " << left[i].attrName << std::endl;
 		attrs[i] = left[i];
 	}
 
 	DataAttrInfo* right = RightIterator->getRelAttr();
 	for (i = 0; i < RightIterator->getAttrCount(); i++) {
+        std::cout << "right[" << i << "] = " << right[i].attrName << std::endl;
 		attrs[LeftIterator->getAttrCount() + i] = right[i];
 		attrs[LeftIterator->getAttrCount() + i].offset += LeftIterator->getLength();
 	}
+
+    for(i = 0; i < attrCount; i++) {
+        std::cout << "attrs[" << i << "] = " << attrs[i].attrName << ", " << attrs[i].offset << std::endl;
+    }
 
 	// Taille d'un tuple
 	lengthL = LeftIterator->getLength();

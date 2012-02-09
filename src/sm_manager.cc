@@ -362,6 +362,10 @@ RC SM_Manager::CreateIndex(const char *relName,
     rc = ixm.CloseIndex(ixih);
     if(rc) return rc;
 
+    // Force pages
+    relcat_fh.ForcePages();
+    attrcat_fh.ForcePages();
+
     cout << "CreateIndex\n"
          << "   relName =" << relName << "\n"
          << "   attrName=" << attrName << "\n";

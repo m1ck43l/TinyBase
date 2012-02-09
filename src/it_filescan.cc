@@ -12,6 +12,9 @@ IT_FileScan::IT_FileScan(RM_Manager* _rmm, SM_Manager* _smm, const char * _relNa
 					: rmm(_rmm), smm(_smm), relName(_relName), scanCond(&_scanCond) {
 
 	rc = smm->GetAttributesFromRel(relName, attrs, attrCount);
+    if (scanCond->op != NO_OP) {
+        rc = smm->GetAttrTpl(relName, scanCond->lhsAttr.attrName, attrCat, rid);
+    }
 }
 
 IT_FileScan::~IT_FileScan() {
@@ -24,14 +27,6 @@ RC IT_FileScan::Open() {
 	}
 
 	RC rc;
-	RID rid;
-	AttrCat attrCat;
-
-	// Si on a une condition sur le scan on récupère l'attribut
-	if (scanCond->op != NO_OP) {
-		rc = smm->GetAttrTpl(relName, scanCond->lhsAttr.attrName, attrCat, rid);
-		if(rc) return rc;
-	}
 
 	rc = rmm->OpenFile(relName, rmfh);
 	if(rc) return rc;

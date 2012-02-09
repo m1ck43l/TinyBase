@@ -56,40 +56,77 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs[],
 {
     int i;
 
-    cout << "Vérification des relations..." << endl;
     RC rc = checkRelations(nRelations, relations);
     if (rc) {
-    	cout << "   Erreur dans les relations\n";
     	return rc;
     }
-    cout << "Relations validées" << endl;
 
-    cout << "Vérification des attributs..." << endl;
 	rc = checkSelAttrs(nSelAttrs, selAttrs);
 	if (rc) {
-		cout << "   Erreur dans les relations\n";
 		return rc;
 	}
-	cout << "Attributs validés" << endl;
 
-	cout << "Vérification de la clause where..." << endl;
 	rc = checkWhereAttrs(nConditions, conditions);
 	if (rc) {
-		cout << "   Erreur dans les relations\n";
 		return rc;
 	}
-	cout << "Clause where validée" << endl;
+
+    RelAttr* rewritedSelAttrs = new RelAttr[nSelAttrs];
+    for (int j = 0;j < nSelAttrs; j++) {
+        rewritedSelAttrs[j] = selAttrs[j];
+    }
+
+    cout << "ok" << endl;
+
+    // Reecriture du select *
+    DataAttrInfo** relAttr = new DataAttrInfo*[nRelations];
+    cout << "ok" << endl;
+    int* attrNbr = new int[nRelations];
+    cout << "ok" << endl;
+    int nRwSelAttrs = 0;
+    if (nSelAttrs == 1 && strcmp(selAttrs[0].attrName, "*") == 0) {
+        nRwSelAttrs = 0;
+        for (int j = 0; j < nRelations; j++) {
+            cout << "ok" << endl;
+            rc = smm->GetAttributesFromRel(relations[j], relAttr[j], attrNbr[j]);
+            if(rc) return rc;
+
+            nRwSelAttrs += attrNbr[j];
+        }
+
+        cout << "ok" << endl;
+        delete[] rewritedSelAttrs;
+        cout << "ok" << endl;
+        rewritedSelAttrs = new RelAttr[nRwSelAttrs];
+        cout << "ok" << endl;
+        int k = 0;
+        for(int j = 0; j < nRelations; j++) {
+            for (i = 0; i < attrNbr[j]; i++) {
+                cout << "ok" << endl;
+                strcpy(rewritedSelAttrs[k].attrName, relAttr[j][i].attrName);
+                rewritedSelAttrs[k].relName = NULL;
+                k++;
+            }
+        }
+    }
+    cout << "ok" << endl;
+    delete[] relAttr;
+    delete[] attrNbr;
 
     // On crée la racine
     QL_Iterator* racine;
     Condition NO_COND = {{NULL,NULL}, NO_OP, 0, {NULL,NULL}, {INT,NULL}};
-    rc = SelectPlan(racine, nSelAttrs, selAttrs, nRelations, relations, nConditions, conditions, NO_COND);
+    rc = SelectPlan(racine, nRwSelAttrs, rewritedSelAttrs, nRelations, relations, nConditions, conditions, NO_COND);
     if(rc) return rc;
-
+    cout <<"dsdf"<<endl;
 
     // On récupère les attributs de la table
     DataAttrInfo* attributes = racine->getRelAttr();
     int attrNb = racine->getAttrCount();
+    cout<<"attrNb = "<<attrNb<<endl;
+
+    for(int j = 0; j < attrNb; j++)
+        cout << "attr[" << j << "] = " << attributes[j].attrName << ", " << attributes[j].attrType << ", " << attributes[j].attrLength << endl;
 
     // La classe printer
     Printer p(attributes, attrNb);
@@ -98,7 +135,7 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs[],
     // On ouvre l'itérateur que l'on récupère grâce au plan
     rc = racine->Open();
     if(rc) return rc;
-
+    cout<<"open réussi"<<endl;
     // On parcourt l'itérateur et on affiche chaque tuple trouvé
     RM_Record rec;
     while ((rc = racine->GetNext(rec)) != QL_EOF) {
@@ -125,6 +162,8 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs[],
     // On détruit les itérateurs
     delete racine;
 
+    delete[] rewritedSelAttrs;
+
     cout << "Select\n";
 
     cout << "   nSelAttrs = " << nSelAttrs << "\n";
@@ -145,7 +184,7 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs[],
 //
 // SelectPLan
 //
-RC QL_Manager::SelectPlan(QL_Iterator* racine, int nSelAttrs, const RelAttr selAttrs[],
+RC QL_Manager::SelectPlan(QL_Iterator *&racine, int nSelAttrs, const RelAttr selAttrs[],
         int nRelations, const char * const relations[],
         int nConditions, const Condition conditions[],
         const Condition& noCond) {
@@ -161,7 +200,7 @@ RC QL_Manager::SelectPlan(QL_Iterator* racine, int nSelAttrs, const RelAttr selA
 	//    3) on applique les jointures à toutes les relations suivantes -> racine = new IT_Join(leaf1, leaf2, ...)
 	// On applique la projection sur root
 	for (int i = 0; i < nRelations; i++) {
-
+        cout<<"première boucle i = "<<i<<endl;
         int idxCond = -1;
         AttrType idxCondType;
 
@@ -172,47 +211,50 @@ RC QL_Manager::SelectPlan(QL_Iterator* racine, int nSelAttrs, const RelAttr selA
         // On privilégie un index sur des INT puis FLOAT puis STRING
         // Si l'opération est NE_OP on ne la prend pas en compte
         for(int j = 0; j < nConditions; j++) {
+            cout<<"-1"<<endl;
             if(conditions[j].bRhsIsAttr || conditions[j].op == NE_OP) {
                 continue;
             }
-
-            if(strcmp(conditions[j].lhsAttr.relName,relations[i]) !=0 ) {
+            cout<<"0"<<endl;
+            if(conditions[j].lhsAttr.relName!=NULL &&
+                    strcmp(conditions[j].lhsAttr.relName,relations[i]) !=0 ) {
                 continue;
             }
-
+            cout<<"1"<<endl;
             rc = smm->GetAttrTpl(relations[i], conditions[j].lhsAttr.attrName, attrTpl, rid);
             if(rc) return rc;
-
+            cout<<"2"<<endl;
             // Vérifions si l'attribut est un index
             if (attrTpl.indexNo == -1)
                 continue;
-
+            cout<<"3"<<endl;
             // On stocke l'indice sinon
             if((idxCond == -1) || (IsBetter(idxCondType, attrTpl.attrType))) {
                 idxCond = j;
                 idxCondType = attrTpl.attrType;
             }
         }
-
+        cout<<"fin d'index"<<endl;
         // Si on ne trouve pas d'index on choisit une condition
         // selon le type
         if(idxCond == -1) {
-            for(int i = 0; i < nConditions; i++) {
-                if(conditions[i].bRhsIsAttr) {
+            for(int j = 0; j < nConditions; j++) {
+                if(conditions[j].bRhsIsAttr) {
                     continue;
                 }
 
-                if(strcmp(conditions[i].lhsAttr.relName,relations[i]) !=0 ){
+                if(conditions[j].lhsAttr.relName!=NULL &&
+                        strcmp(conditions[j].lhsAttr.relName,relations[i]) !=0 ){
                     continue;
                 }
 
-                if((fileCond == -1) || (IsBetter(fileCondType, conditions[i].rhsValue.type))) {
-                    fileCond = i;
-                    fileCondType = conditions[i].rhsValue.type;
+                if((fileCond == -1) || (IsBetter(fileCondType, conditions[j].rhsValue.type))) {
+                    fileCond = j;
+                    fileCondType = conditions[j].rhsValue.type;
                 }
             }
         }
-
+        cout<<"avant les feuilles"<<endl;
         // Mise en place de l'itérateur niveau feuille
         if(idxCond != -1) {
             feuille = new IT_IndexScan(rmm, smm, ixm, relations[i], conditions[idxCond].lhsAttr.attrName, conditions[idxCond], rc);
@@ -224,7 +266,7 @@ RC QL_Manager::SelectPlan(QL_Iterator* racine, int nSelAttrs, const RelAttr selA
             feuille = new IT_FileScan(rmm, smm, relations[i], noCond, rc);
             if(rc) return rc;
         }
-
+        cout<<"fin de feuille"<<endl;
         // Maintenant on doit appliquer un filtre par condition autre que celle du scan
         for(int j = 0; j < nConditions; j++) {
             if(j != idxCond && j != fileCond) {
@@ -236,11 +278,12 @@ RC QL_Manager::SelectPlan(QL_Iterator* racine, int nSelAttrs, const RelAttr selA
                 }
             }
         }
-
+        cout<<"fin de filtres de conditions"<<endl;
         //Il ne reste plus qu'à traiter les jointures
 
         if (i==0) {
             racine = feuille;
+            cout<<"racine = feuille réussi"<<endl;
         }
         else {
             for(int j = 0; j < nConditions; j++) {
@@ -264,6 +307,7 @@ RC QL_Manager::SelectPlan(QL_Iterator* racine, int nSelAttrs, const RelAttr selA
                 racine = new IT_NestedLoopJoin(racine,feuille,conditions[j]);
             }
         }
+        cout<<"arrivé ici?"<<endl;
 	}
 
     racine = new IT_Projection(racine,nSelAttrs,selAttrs);
