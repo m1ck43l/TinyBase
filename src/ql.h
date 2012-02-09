@@ -61,6 +61,10 @@ private:
     RC checkSelAttrs (int nSelAttrs, const RelAttr selAttrs[]);
     RC checkWhereAttrs (int nConditions, const Condition conditions[]);
 
+    // UpdatePLan
+    RC UpdatePlan(QL_Iterator*& racine, const char *relName, const char* attrName,
+			int nConditions, const Condition conditions[]);
+
     // DeletePlan
     RC DeletePlan(QL_Iterator*& racine, const char *relName,
 			int nConditions, const Condition conditions[]);

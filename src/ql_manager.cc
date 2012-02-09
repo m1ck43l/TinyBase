@@ -237,7 +237,137 @@ RC QL_Manager::Update(const char *relName,
                       const Value &rhsValue,
                       int nConditions, const Condition conditions[])
 {
-    int i;
+	int i, iLeft = -1, iRight = -1;
+	RC rc;
+	RM_FileHandle rmfh;
+
+	DataAttrInfo* attributes;
+	IX_IndexHandle indexes;
+
+	int attrNb;
+
+	// On met la relation dans le vecteur
+	relationsMap.clear();
+	relationsMap.push_back(relName);
+
+	// On vérifie les conditions
+	rc = checkWhereAttrs(nConditions, conditions);
+	if(rc) return rc;
+
+	// On vérifie l'attribut de l'update
+	AttrCat left;
+	RID rid;
+	rc = smm.GetAttrTpl(relName, updAttr.attrName, left, rid);
+	if(rc) return rc;
+
+	if(bIsValue) {
+		if (left.attrType != rhsValue.type) {
+			return QL_INVALIDATTR;
+		}
+	} else {
+		AttrCat right;
+		rc = smm.GetAttrTpl(relName, rhsRelAttr.attrName, right, rid);
+		if(rc) return rc;
+
+		if (right.attrType != left.attrType)
+			return QL_INVALIDATTR;
+	}
+
+	// On ouvre la relation dans laquelle on veut supprimer les tuples
+	rc = rmm.OpenFile(relName, rmfh);
+	if(rc) return rc;
+
+	// On crée la racine
+	QL_Iterator* racine;
+	rc = UpdatePlan(racine, relName, updAttr.attrName, nConditions, conditions);
+	if(rc) return rc;
+
+	// On récupère les attributs de la table
+	attributes = racine->getRelAttr();
+	attrNb = racine->getAttrCount();
+
+	// On récupère les indices des deux attributs
+	for(int j = 0; j < attrNb; j++) {
+		if(strcmp(attributes[j].attrName, updAttr.attrName) == 0) {
+			iLeft = j;
+		}
+		if(!bIsValue && strcmp(attributes[j].attrName, rhsRelAttr.attrName) == 0) {
+			iRight = j;
+		}
+	}
+
+	// On ouvre juste l'index sur iLeft (modification de la valeur -> clé)
+	if(attributes[iLeft].indexNo != -1) {
+		rc = ixm.OpenIndex(relName, attributes[iLeft].indexNo, indexes);
+		if(rc) return rc;
+	}
+
+	// La classe printer
+	Printer p(attributes, attrNb);
+	p.PrintHeader(cout);
+
+	// On ouvre l'itérateur que l'on récupère grâce au plan
+	rc = racine->Open();
+	if(rc) return rc;
+
+	// On parcourt l'itérateur et on affiche chaque tuple trouvé
+	RM_Record rec;
+	while ((rc = racine->GetNext(rec)) != QL_EOF) {
+		if(rc) return rc;
+
+		char * pData;
+		rc = rec.GetData(pData);
+		if(rc) return rc;
+
+		rc = rec.GetRid(rid);
+		if(rc) return rc;
+
+		// On affiche le record
+		p.Print(cout, pData);
+
+		// Suppression des records dans l'index touché par les modifs
+		if (attributes[iLeft].indexNo != -1) {
+			rc = indexes.DeleteEntry(pData + attributes[iLeft].offset, rid);
+			if(rc) return rc;
+		}
+
+		// Mise à jour de la valeur
+		// deux cas soit c'est une valeur
+		if(bIsValue) {
+			memcpy(pData + attributes[iLeft].offset, rhsValue.data, attributes[iLeft].attrLength);
+		} else {
+			memcpy(pData + attributes[iLeft].offset, pData + attributes[iRight].offset, attributes[iLeft].attrLength);
+		}
+
+		// On met à jour le tuple
+		rc = rmfh.UpdateRec(rec);
+		if(rc) return rc;
+
+		// Finalement on réinsère dans l'index
+		if (attributes[iLeft].indexNo != -1) {
+			rc = indexes.InsertEntry(pData + attributes[iLeft].offset, rid);
+			if(rc) return rc;
+		}
+	}
+
+	p.PrintFooter(cout);
+
+	// On ferme l'itérateur
+	rc = racine->Close();
+	if(rc) return rc;
+
+	// On détruit les itérateurs
+	delete racine;
+
+	// On ferme l'index
+	if (attributes[iLeft].indexNo != -1) {
+		rc = ixm.CloseIndex(indexes);
+		if(rc) return rc;
+	}
+
+	// On ferme la relation
+	rc = rmm.CloseFile(rmfh);
+	if(rc) return rc;
 
     cout << "Update\n";
 
@@ -279,6 +409,84 @@ RC QL_Manager::DeletePlan(QL_Iterator*& racine, const char *relName,
 		if(conditions[i].bRhsIsAttr || conditions[i].op == NE_OP) {
 			continue;
 		}
+
+		rc = smm.GetAttrTpl(relName, conditions[i].lhsAttr.attrName, attrTpl, rid);
+		if(rc) return rc;
+
+		// Vérifions si l'attribut est un index
+		if (attrTpl.indexNo == -1)
+			continue;
+
+		// On stocke l'indice sinon
+		if((idxCond == -1) || (IsBetter(idxCondType, attrTpl.attrType))) {
+			idxCond = i;
+			idxCondType = attrTpl.attrType;
+		}
+	}
+
+	// Si on ne trouve pas d'index on choisit une condition
+	// selon le type
+	if(idxCond == -1) {
+		for(int i = 0; i < nConditions; i++) {
+			if(conditions[i].bRhsIsAttr) {
+				continue;
+			}
+
+			if((fileCond == -1) || (IsBetter(fileCondType, conditions[i].rhsValue.type))) {
+				fileCond = i;
+				fileCondType = conditions[i].rhsValue.type;
+			}
+		}
+	}
+
+	// Mise en place de l'itérateur niveau feuille
+	if(idxCond != -1) {
+		racine = new IT_IndexScan(rmm, smm, ixm, relName, conditions[idxCond].lhsAttr.attrName, conditions[idxCond]);
+	} else if(fileCond != -1) {
+		racine = new IT_FileScan(rmm, smm, relName, conditions[fileCond]);
+	} else {
+		racine = new IT_FileScan(rmm, smm, relName, NO_COND);
+	}
+
+	// Maintenant on doit appliquer un filtre par condition autre que celle du scan
+	for(int i = 0; i < nConditions; i++) {
+		if(i != idxCond && i != fileCond) {
+			racine = new IT_Filter(racine, conditions[i]);
+		}
+	}
+
+	return 0;
+}
+
+//
+// UpdatePlan
+//
+RC QL_Manager::UpdatePlan(QL_Iterator*& racine, const char *relName, const char* attrName,
+        					int nConditions, const Condition conditions[]) {
+	RC rc;
+	AttrCat attrTpl;
+	RID rid;
+
+	Condition NO_COND = {{NULL,NULL}, NO_OP, 0, {NULL,NULL}, {INT,NULL}};
+
+	int idxCond = -1;
+	AttrType idxCondType;
+
+	int fileCond = -1;
+	AttrType fileCondType;
+
+	// On essaye de trouver un index parmis les conditions
+	// On privilégie un index sur des INT puis FLOAT puis STRING
+	// Si l'opération est NE_OP on ne la prend pas en compte
+	for(int i = 0; i < nConditions; i++) {
+		if(conditions[i].bRhsIsAttr || conditions[i].op == NE_OP) {
+			continue;
+		}
+
+		// On ne veut pas utiliser un scan sur un index à updater
+		// pour éviter des erreurs de mise à jour/scan
+		if(strcmp(conditions[i].lhsAttr.attrName, attrName) == 0)
+			continue;
 
 		rc = smm.GetAttrTpl(relName, conditions[i].lhsAttr.attrName, attrTpl, rid);
 		if(rc) return rc;
