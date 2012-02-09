@@ -23,8 +23,6 @@ private:
 	QL_Iterator* it;
 
 	int length;
-	int nProjAttrs;
-	DataAttrInfo* projAttrs;
 };
 
 #endif /* IT_PROJECTION_H_ */

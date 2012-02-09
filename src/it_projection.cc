@@ -8,23 +8,23 @@
 #include "it_projection.h"
 
 IT_Projection::IT_Projection(QL_Iterator* it, int nSelAttrs, const RelAttr selAttrs[]) : it(it) {
-	nProjAttrs = nSelAttrs;
+    attrCount = nSelAttrs;
 	length = 0;
 
-	projAttrs = new DataAttrInfo[nProjAttrs];
-	for(int i = 0; i < nProjAttrs; i++) {
-		DataAttrInfo* attrs = it->getRelAttr();
+    attrs = new DataAttrInfo[attrCount];
+    for(int i = 0; i < attrCount; i++) {
+        DataAttrInfo* tempattrs = it->getRelAttr();
 		for(int j = 0; j < it->getAttrCount(); j++) {
-			if (strcmp(selAttrs[i].relName, attrs[j].relName) == 0 && strcmp(selAttrs[i].attrName, attrs[j].attrName) == 0) {
-				projAttrs[i] = attrs[j];
-				length += attrs[j].attrLength;
+            if (strcmp(selAttrs[i].relName, tempattrs[j].relName) == 0 && strcmp(selAttrs[i].attrName, tempattrs[j].attrName) == 0) {
+                attrs[i] = tempattrs[j];
+                length += tempattrs[j].attrLength;
 			}
 		}
 	}
 }
 
 IT_Projection::~IT_Projection() {
-	delete[] projAttrs;
+    delete[] attrs;
 	delete it;
 }
 
@@ -72,9 +72,9 @@ RC IT_Projection::GetNext(RM_Record& tpl) {
 
 	int offset = 0;
 	char* pDataNew = new char[length];
-	for(int i = 0; i < nProjAttrs; i++) {
-		memcpy(pDataNew + offset, pData + projAttrs[i].offset, projAttrs[i].attrLength);
-		offset += projAttrs[i].attrLength;
+    for(int i = 0; i < attrCount; i++) {
+        memcpy(pDataNew + offset, pData + attrs[i].offset, attrs[i].attrLength);
+        offset += attrs[i].attrLength;
 	}
 
 	rc = tpl.Set(pDataNew, length);

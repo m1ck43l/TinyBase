@@ -22,6 +22,8 @@
 #include "it_filescan.h"
 #include "it_indexscan.h"
 #include "it_filter.h"
+#include "it_nestedloopjoin.h"
+#include "it_projection.h"
 
 using namespace std;
 
@@ -78,6 +80,51 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs[],
 	}
 	cout << "Clause where validée" << endl;
 
+    // On crée la racine
+    QL_Iterator* racine;
+    Condition NO_COND = {{NULL,NULL}, NO_OP, 0, {NULL,NULL}, {INT,NULL}};
+    rc = SelectPlan(racine, nSelAttrs, selAttrs, nRelations, relations, nConditions, conditions, NO_COND);
+    if(rc) return rc;
+
+
+    // On récupère les attributs de la table
+    DataAttrInfo* attributes = racine->getRelAttr();
+    int attrNb = racine->getAttrCount();
+
+    // La classe printer
+    Printer p(attributes, attrNb);
+    p.PrintHeader(cout);
+
+    // On ouvre l'itérateur que l'on récupère grâce au plan
+    rc = racine->Open();
+    if(rc) return rc;
+
+    // On parcourt l'itérateur et on affiche chaque tuple trouvé
+    RM_Record rec;
+    while ((rc = racine->GetNext(rec)) != QL_EOF) {
+        if(rc) return rc;
+
+        char * pData;
+        rc = rec.GetData(pData);
+        if(rc) return rc;
+
+        RID rid;
+        rc = rec.GetRid(rid);
+        if(rc) return rc;
+
+        // On affiche le record
+        p.Print(cout, pData);
+    }
+
+    p.PrintFooter(cout);
+
+    // On ferme l'itérateur
+    rc = racine->Close();
+    if(rc) return rc;
+
+    // On détruit les itérateurs
+    delete racine;
+
     cout << "Select\n";
 
     cout << "   nSelAttrs = " << nSelAttrs << "\n";
@@ -100,8 +147,13 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs[],
 //
 RC QL_Manager::SelectPlan(QL_Iterator* racine, int nSelAttrs, const RelAttr selAttrs[],
         int nRelations, const char * const relations[],
-        int nConditions, const Condition conditions[]) {
+        int nConditions, const Condition conditions[],
+        const Condition& noCond) {
 
+    RC rc;
+    AttrCat attrTpl;
+    RID rid;
+    QL_Iterator* feuille = NULL;
 	// Pour chaque relation,
 	//    1) on choisit un itérateur niveau feuille (indexScan ou fileScan) -> leaf
 	//    2) on applique les filtres -> leaf = new IT_Filter(leaf, ...)
@@ -110,8 +162,113 @@ RC QL_Manager::SelectPlan(QL_Iterator* racine, int nSelAttrs, const RelAttr selA
 	// On applique la projection sur root
 	for (int i = 0; i < nRelations; i++) {
 
+        int idxCond = -1;
+        AttrType idxCondType;
+
+        int fileCond = -1;
+        AttrType fileCondType;
+
+        // On essaye de trouver un index parmis les conditions
+        // On privilégie un index sur des INT puis FLOAT puis STRING
+        // Si l'opération est NE_OP on ne la prend pas en compte
+        for(int j = 0; j < nConditions; j++) {
+            if(conditions[j].bRhsIsAttr || conditions[j].op == NE_OP) {
+                continue;
+            }
+
+            if(strcmp(conditions[j].lhsAttr.relName,relations[i]) !=0 ) {
+                continue;
+            }
+
+            rc = smm->GetAttrTpl(relations[i], conditions[j].lhsAttr.attrName, attrTpl, rid);
+            if(rc) return rc;
+
+            // Vérifions si l'attribut est un index
+            if (attrTpl.indexNo == -1)
+                continue;
+
+            // On stocke l'indice sinon
+            if((idxCond == -1) || (IsBetter(idxCondType, attrTpl.attrType))) {
+                idxCond = j;
+                idxCondType = attrTpl.attrType;
+            }
+        }
+
+        // Si on ne trouve pas d'index on choisit une condition
+        // selon le type
+        if(idxCond == -1) {
+            for(int i = 0; i < nConditions; i++) {
+                if(conditions[i].bRhsIsAttr) {
+                    continue;
+                }
+
+                if(strcmp(conditions[i].lhsAttr.relName,relations[i]) !=0 ){
+                    continue;
+                }
+
+                if((fileCond == -1) || (IsBetter(fileCondType, conditions[i].rhsValue.type))) {
+                    fileCond = i;
+                    fileCondType = conditions[i].rhsValue.type;
+                }
+            }
+        }
+
+        // Mise en place de l'itérateur niveau feuille
+        if(idxCond != -1) {
+            feuille = new IT_IndexScan(rmm, smm, ixm, relations[i], conditions[idxCond].lhsAttr.attrName, conditions[idxCond], rc);
+            if(rc) return rc;
+        } else if(fileCond != -1) {
+            feuille = new IT_FileScan(rmm, smm, relations[i], conditions[fileCond], rc);
+            if(rc) return rc;
+        } else {
+            feuille = new IT_FileScan(rmm, smm, relations[i], noCond, rc);
+            if(rc) return rc;
+        }
+
+        // Maintenant on doit appliquer un filtre par condition autre que celle du scan
+        for(int j = 0; j < nConditions; j++) {
+            if(j != idxCond && j != fileCond) {
+
+                if( (strcmp(conditions[j].lhsAttr.relName, relations[i])==0  && !conditions[j].bRhsIsAttr) ||
+                    (strcmp(conditions[j].lhsAttr.relName, relations[i])==0  && conditions[j].bRhsIsAttr && strcmp(conditions[j].rhsAttr.relName, relations[i])==0) ) {
+
+                feuille = new IT_Filter(racine, conditions[j]);
+                }
+            }
+        }
+
+        //Il ne reste plus qu'à traiter les jointures
+
+        if (i==0) {
+            racine = feuille;
+        }
+        else {
+            for(int j = 0; j < nConditions; j++) {
+
+                if(!conditions[j].bRhsIsAttr) continue;
+                if (strcmp(conditions[j].lhsAttr.relName,conditions[j].rhsAttr.relName) == 0) continue;
+                if(strcmp(conditions[j].lhsAttr.relName,relations[i]) != 0  && strcmp(conditions[j].rhsAttr.relName,relations[i]) != 0  ) continue;
+                int k=0;
+                for(k=0;k<i;k++){
+                    if (strcmp(conditions[j].lhsAttr.relName, relations[k]) == 0) {
+                        break;
+                    }
+                    if (strcmp(conditions[j].rhsAttr.relName, relations[k]) == 0) {
+                        break;
+                    }
+                }
+                if (k==i) {
+                    continue;
+                }
+
+                racine = new IT_NestedLoopJoin(racine,feuille,conditions[j]);
+            }
+        }
 	}
 
+    racine = new IT_Projection(racine,nSelAttrs,selAttrs);
+
+    return 0;
 }
 
 //
