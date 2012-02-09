@@ -27,15 +27,11 @@ RC IT_FileScan::Open() {
 	RID rid;
 	AttrCat attrCat;
 
-	std::cout << "Before --> " << (scanCond->op != NO_OP) << std::endl;
-
 	// Si on a une condition sur le scan on récupère l'attribut
 	if (scanCond->op != NO_OP) {
 		rc = smm->GetAttrTpl(relName, scanCond->lhsAttr.attrName, attrCat, rid);
 		if(rc) return rc;
 	}
-
-	std::cout << "After --> " << (scanCond->op != NO_OP) << std::endl;
 
 	rc = rmm->OpenFile(relName, rmfh);
 	if(rc) return rc;
