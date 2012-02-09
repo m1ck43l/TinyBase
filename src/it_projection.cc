@@ -52,6 +52,17 @@ IT_Projection::~IT_Projection() {
 	delete it;
 }
 
+// Affiche le query plan
+void IT_Projection::Print(std::ostream &output, int spaces) {
+	for(int i = 0; i < spaces; i++) {
+		output << " ";
+	}
+
+	// Affichage des infos
+	output << "Projection \n";
+	it->Print(output, spaces + SPACES);
+}
+
 RC IT_Projection::Open() {
 	RC rc;
 

@@ -24,6 +24,19 @@ IT_Filter::~IT_Filter() {
 	delete it;
 }
 
+// Affiche le query plan
+void IT_Filter::Print(std::ostream &output, int spaces) {
+	for(int i = 0; i < spaces; i++) {
+		output << " ";
+	}
+
+	// Affichage des infos
+	output << "Filter : " ;
+	PrintACond(output, cond);
+	output << "\n";
+	it->Print(output, spaces + SPACES);
+}
+
 RC IT_Filter::Open() {
 	if(bIsOpen) {
 		return QL_ITALRDYOPEN;

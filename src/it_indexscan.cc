@@ -12,12 +12,22 @@ IT_IndexScan::IT_IndexScan(RM_Manager* rmm, SM_Manager* _smm, IX_Manager* ixm, c
 	: rmm(rmm), smm(_smm), ixm(ixm), relName(_relName), indexName(_indexName), scanCond(&_scanCond) {
 	rc = smm->GetAttributesFromRel(relName, attrs, attrCount);
     rc = smm->GetAttrTpl(relName, indexName, attrCat, rid);
-
-    std::cout << "indexxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx" << std::endl;
 }
 
 IT_IndexScan::~IT_IndexScan() {
 	delete[] attrs;
+}
+
+// Affiche le query plan
+void IT_IndexScan::Print(std::ostream &output, int spaces) {
+	for(int i = 0; i < spaces; i++) {
+		output << " ";
+	}
+
+	// Affichage des infos
+	output << "IndexScan : [" << relName << "], [" << indexName << "] : " ;
+	PrintACond(output, scanCond);
+	output << "\n";
 }
 
 RC IT_IndexScan::Open() {

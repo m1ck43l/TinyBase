@@ -21,6 +21,18 @@ IT_FileScan::~IT_FileScan() {
 	delete[] attrs;
 }
 
+// Affiche le query plan
+void IT_FileScan::Print(std::ostream &output, int spaces) {
+	for(int i = 0; i < spaces; i++) {
+		output << " ";
+	}
+
+	// Affichage des infos
+	output << "FileScan : [" << relName << "] : " ;
+	PrintACond(output, scanCond);
+	output << "\n";
+}
+
 RC IT_FileScan::Open() {
 	if(bIsOpen) {
 		return RM_SCANOPEN;

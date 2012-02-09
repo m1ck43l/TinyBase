@@ -92,6 +92,20 @@ IT_NestedLoopJoin::~IT_NestedLoopJoin() {
 	delete RightIterator;
 }
 
+// Affiche le query plan
+void IT_NestedLoopJoin::Print(std::ostream &output, int spaces) {
+	for(int i = 0; i < spaces; i++) {
+		output << " ";
+	}
+
+	// Affichage des infos
+	output << "NestedLoopJoin : " ;
+	PrintACond(output, cond);
+	output << "\n";
+	LeftIterator->Print(output, spaces + SPACES);
+	RightIterator->Print(output, spaces + SPACES);
+}
+
 RC IT_NestedLoopJoin::Open() {
 	// On ouvre les deux itérateurs
 	RC rc;

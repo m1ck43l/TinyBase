@@ -25,6 +25,7 @@
 
 #include "ql_iterator.h"
 
+#define SPACES 4
 
 //
 // QL_Manager: query language (DML)
@@ -88,13 +89,16 @@ private:
 //
 void QL_PrintError(RC rc);
 
-#define QL_NOTBLFOUND       	(START_SM_WARN + 0)
-#define QL_RELDBLFOUND			(START_SM_WARN + 1)
-#define QL_INVALIDATTR			(START_SM_WARN + 2)
-#define QL_ATTRNOTFOUND			(START_SM_WARN + 3)
-#define QL_WRONGTYPEWHERECLAUSE	(START_SM_WARN + 4)
-#define QL_ITNOTOPEN			(START_SM_WARN + 5)
-#define QL_EOF					(START_SM_WARN + 6)
-#define QL_ITALRDYOPEN			(START_SM_WARN + 7)
+#define QL_NOTBLFOUND       	(START_QL_WARN + 0)
+#define QL_RELDBLFOUND			(START_QL_WARN + 1)
+#define QL_INVALIDATTR			(START_QL_WARN + 2)
+#define QL_ATTRNOTFOUND			(START_QL_WARN + 3)
+#define QL_WRONGTYPEWHERECLAUSE	(START_QL_WARN + 4)
+#define QL_ITNOTOPEN			(START_QL_WARN + 5)
+#define QL_EOF					(START_QL_WARN + 6)
+#define QL_ITALRDYOPEN			(START_QL_WARN + 7)
+#define QL_LASTWARN				QL_ITALRDYOPEN
+
+#define QL_LASTERROR			START_QL_ERR
 
 #endif

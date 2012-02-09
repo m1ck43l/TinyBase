@@ -19,6 +19,7 @@ public:
 	RC Open();
 	RC GetNext(RM_Record& outRec);
 	RC Close();
+	void Print(std::ostream &output, int spaces);
 private:
 	QL_Iterator* LeftIterator;
 	QL_Iterator* RightIterator;

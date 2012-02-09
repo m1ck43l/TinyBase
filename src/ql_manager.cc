@@ -56,6 +56,22 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs[],
 {
     int i;
 
+    cout << "Select\n";
+
+	cout << "   nSelAttrs = " << nSelAttrs << "\n";
+	for (i = 0; i < nSelAttrs; i++)
+		cout << "   selAttrs[" << i << "]:" << selAttrs[i] << "\n";
+
+	cout << "   nRelations = " << nRelations << "\n";
+	for (i = 0; i < nRelations; i++)
+		cout << "   relations[" << i << "] " << relations[i] << "\n";
+
+	cout << "   nCondtions = " << nConditions << "\n";
+	for (i = 0; i < nConditions; i++)
+		cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
+
+	cout << "\n\n";
+
     RC rc = checkRelations(nRelations, relations);
     if (rc) {
     	return rc;
@@ -76,6 +92,13 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs[],
     Condition NO_COND = {{NULL,NULL}, NO_OP, 0, {NULL,NULL}, {INT,NULL}};
     rc = SelectPlan(racine, nSelAttrs, selAttrs, nRelations, relations, nConditions, conditions, NO_COND);
     if(rc) return rc;
+
+    // Si on le souhaite on affiche le query plan
+	if (bQueryPlans) {
+		cout << "Query Plan :\n";
+		racine->Print(cout, SPACES);
+		cout << "\n\n";
+	}
 
     // On récupère les attributs de la table
     DataAttrInfo* attributes = racine->getRelAttr();
@@ -114,20 +137,6 @@ RC QL_Manager::Select(int nSelAttrs, const RelAttr selAttrs[],
 
     // On détruit les itérateurs
     delete racine;
-
-    cout << "Select\n";
-
-    cout << "   nSelAttrs = " << nSelAttrs << "\n";
-    for (i = 0; i < nSelAttrs; i++)
-        cout << "   selAttrs[" << i << "]:" << selAttrs[i] << "\n";
-
-    cout << "   nRelations = " << nRelations << "\n";
-    for (i = 0; i < nRelations; i++)
-        cout << "   relations[" << i << "] " << relations[i] << "\n";
-
-    cout << "   nCondtions = " << nConditions << "\n";
-    for (i = 0; i < nConditions; i++)
-        cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
 
     return 0;
 }
@@ -274,13 +283,6 @@ RC QL_Manager::Insert(const char *relName,
 
 	int i;
 
-	// cout << "Insert\n";
-	//
-	//     cout << "   relName = " << relName << "\n";
-	//     cout << "   nValues = " << nValues << "\n";
-	//     for (i = 0; i < nValues; i++)
-	//         cout << "   values[" << i << "]:" << values[i] << "\n";
-
 	// request : INSERT INTO relname VALUES value[Ø], value[1], value[2]
 
 	// verifications
@@ -391,6 +393,16 @@ RC QL_Manager::Delete(const char *relName,
                       int nConditions, const Condition conditions[])
 {
     int i;
+
+    cout << "Delete\n";
+
+    cout << "   relName = " << relName << "\n";
+    cout << "   nCondtions = " << nConditions << "\n";
+    for (i = 0; i < nConditions; i++)
+        cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
+
+    cout << "\n\n";
+
     RC rc;
     RM_FileHandle rmfh;
 
@@ -416,6 +428,13 @@ RC QL_Manager::Delete(const char *relName,
     Condition NO_COND = {{NULL,NULL}, NO_OP, 0, {NULL,NULL}, {INT,NULL}};
 	rc = DeletePlan(racine, relName, nConditions, conditions, NO_COND);
 	if(rc) return rc;
+
+	// Si on le souhaite on affiche le query plan
+	if (bQueryPlans) {
+		cout << "Query Plan :\n";
+		racine->Print(cout, SPACES);
+		cout << "\n\n";
+	}
 
     // On récupère les attributs de la table
 	attributes = racine->getRelAttr();
@@ -458,7 +477,7 @@ RC QL_Manager::Delete(const char *relName,
 		for(int i = 0; i < attrNb; i++) {
 			if (attributes[i].indexNo != -1) {
 				rc = indexes[i].DeleteEntry(pData + attributes[i].offset, rid);
-				if(rc) return rc;
+				//if(rc) return rc;
 			}
 		}
 
@@ -488,13 +507,6 @@ RC QL_Manager::Delete(const char *relName,
 	rc = rmm->CloseFile(rmfh);
 	if(rc) return rc;
 
-    cout << "Delete\n";
-
-    cout << "   relName = " << relName << "\n";
-    cout << "   nCondtions = " << nConditions << "\n";
-    for (i = 0; i < nConditions; i++)
-        cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
-
     return 0;
 }
 
@@ -510,6 +522,22 @@ RC QL_Manager::Update(const char *relName,
                       int nConditions, const Condition conditions[])
 {
 	int i, iLeft = -1, iRight = -1;
+
+	cout << "Update\n";
+
+	cout << "   relName = " << relName << "\n";
+	cout << "   updAttr:" << updAttr << "\n";
+	if (bIsValue)
+		cout << "   rhs is value: " << rhsValue << "\n";
+	else
+		cout << "   rhs is attribute: " << rhsRelAttr << "\n";
+
+	cout << "   nCondtions = " << nConditions << "\n";
+	for (i = 0; i < nConditions; i++)
+		cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
+
+	cout << "\n\n";
+
 	RC rc;
 	RM_FileHandle rmfh;
 
@@ -554,6 +582,13 @@ RC QL_Manager::Update(const char *relName,
 	Condition NO_COND = {{NULL,NULL}, NO_OP, 0, {NULL,NULL}, {INT,NULL}};
 	rc = UpdatePlan(racine, relName, updAttr.attrName, nConditions, conditions, NO_COND);
 	if(rc) return rc;
+
+	// Si on le souhaite on affiche le query plan
+	if (bQueryPlans) {
+		cout << "Query Plan :\n";
+		racine->Print(cout, SPACES);
+		cout << "\n\n";
+	}
 
 	// On récupère les attributs de la table
 	attributes = racine->getRelAttr();
@@ -641,19 +676,6 @@ RC QL_Manager::Update(const char *relName,
 	// On ferme la relation
 	rc = rmm->CloseFile(rmfh);
 	if(rc) return rc;
-
-    cout << "Update\n";
-
-    cout << "   relName = " << relName << "\n";
-    cout << "   updAttr:" << updAttr << "\n";
-    if (bIsValue)
-        cout << "   rhs is value: " << rhsValue << "\n";
-    else
-        cout << "   rhs is attribute: " << rhsRelAttr << "\n";
-
-    cout << "   nCondtions = " << nConditions << "\n";
-    for (i = 0; i < nConditions; i++)
-        cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
 
     return 0;
 }
@@ -833,6 +855,23 @@ bool QL_Manager::IsBetter(AttrType a, AttrType b) {
 }
 
 //
+// Error table
+//
+static char *QL_WarnMsg[] = {
+    (char*)"No table found",
+    (char*)"Relation doubled",
+    (char*)"Invalid attribute",
+    (char*)"Attribute not found",
+    (char*)"Wrong attribute type in where clause",
+    (char*)"Iterator not open",
+    (char*)"Iterator EOF",
+    (char*)"Iterator already open"
+};
+
+static char *QL_ErrorMsg[] = {
+};
+
+//
 // void QL_PrintError(RC rc)
 //
 // This function will accept an Error code and output the appropriate
@@ -840,7 +879,36 @@ bool QL_Manager::IsBetter(AttrType a, AttrType b) {
 //
 void QL_PrintError(RC rc)
 {
-    cout << "QL_PrintError\n   rc=" << rc << "\n";
+    // Check the return code is within proper limits
+    if (rc >= START_QL_WARN && rc <= QL_LASTWARN)
+		// Print warning
+		cerr << "QL warning: " << QL_WarnMsg[rc - START_QL_WARN] << "\n";
+
+	// Error codes are negative, so invert everything
+	else if (-rc >= -START_QL_ERR && -rc <= -QL_LASTERROR)
+		// Print error
+		cerr << "QL error: " << QL_ErrorMsg[-rc + START_QL_ERR] << "\n";
+
+	else if ((rc >= START_SM_WARN && rc <= SM_LASTWARN) || (-rc >= -START_SM_ERR && -rc <= -SM_LASTERROR))
+		SM_PrintError(rc);
+
+	else if ((rc >= START_IX_WARN && rc <= IX_LASTWARN) || (-rc >= -START_IX_ERR && -rc <= -IX_LASTERROR))
+		IX_PrintError(rc);
+
+	else if ((rc >= START_PF_WARN && rc <= PF_LASTWARN) ||
+		 (-rc >= -START_PF_ERR && -rc < -PF_LASTERROR) ||
+			  (rc == PF_UNIX))
+		PF_PrintError(rc);
+
+	else if ((rc >= START_RM_WARN && rc <= RM_LASTWARN) ||
+		 (-rc >= -START_RM_ERR && -rc < -RM_LASTERROR))
+		RM_PrintError(rc);
+
+	else if (rc == 0)
+		cerr << "QL_PrintError called with return code of 0\n";
+
+	else
+		cerr << "QL error: " << rc << " is out of bounds\n";
 }
 
 //

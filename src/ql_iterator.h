@@ -19,6 +19,9 @@ public:
 	virtual RC GetNext(RM_Record& outRec) = 0;
 	virtual RC Close() = 0;
 
+	// Afficher les query plans
+	virtual void Print(std::ostream &output, int spaces) = 0;
+
 	virtual DataAttrInfo* getRelAttr() { return attrs; }
 	virtual int getAttrCount() { return attrCount; }
 
@@ -28,6 +31,26 @@ public:
 			length += attrs[i].attrLength;
 		}
 		return length;
+	}
+
+	void PrintACond(std::ostream &output, const Condition* cond) {
+		if(cond->op == NO_OP) {
+			output << "No Condition";
+		} else {
+			output << "{" << cond->lhsAttr << " " << cond->op << " ";
+			if(cond->bRhsIsAttr) {
+				output << cond->rhsAttr;
+			} else {
+				if(cond->rhsValue.type == INT) {
+					output << *((int*)cond->rhsValue.data);
+				} else if(cond->rhsValue.type == FLOAT) {
+					output << *((float*)cond->rhsValue.data);
+				} else if(cond->rhsValue.type == STRING) {
+					output << "\"" << *((char*)cond->rhsValue.data) << "\"";
+				}
+			}
+			output << "}";
+		}
 	}
 
 protected:
