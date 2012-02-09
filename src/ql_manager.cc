@@ -492,16 +492,17 @@ RC QL_Manager::Delete(const char *relName,
 	rc = racine->Close();
 	if(rc) return rc;
 
-	// On détruit les itérateurs
-	delete racine;
-
-	// On ferme les indexes
+	// On ferme les indexes avant de détruire la racine pour conserver
+	// le tableau attributes
 	for (int i = 0; i < attrNb; i++) {
 		if (attributes[i].indexNo != -1) {
 			rc = ixm->CloseIndex(indexes[i]);
 			if(rc) return rc;
 		}
 	}
+
+	// On détruit les itérateurs
+	delete racine;
 
 	// On ferme la relation
 	rc = rmm->CloseFile(rmfh);

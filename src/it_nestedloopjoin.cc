@@ -27,10 +27,10 @@ IT_NestedLoopJoin::IT_NestedLoopJoin(QL_Iterator* _left, QL_Iterator* _right, co
 	DataAttrInfo* attrsR = RightIterator->getRelAttr();
 	for(int j = 0; j < RightIterator->getAttrCount(); j++) {
 		if(!trouve) {
-				// L'attribut gauche de la condition est dans l'arbre droit...
-				if (strcmp(cond->lhsAttr.relName, attrsR[j].relName) == 0 && strcmp(cond->lhsAttr.attrName, attrsR[j].attrName) == 0) {
-					leftAttr = attrsR[j];
-				}
+			// L'attribut gauche de la condition est dans l'arbre droit...
+			if (strcmp(cond->lhsAttr.relName, attrsR[j].relName) == 0 && strcmp(cond->lhsAttr.attrName, attrsR[j].attrName) == 0) {
+				leftAttr = attrsR[j];
+			}
 		} else {
 			// L'attribut droit de la condition est dans l'arbre droit...
 			if (strcmp(cond->rhsAttr.relName, attrsR[j].relName) == 0 && strcmp(cond->rhsAttr.attrName, attrsR[j].attrName) == 0) {

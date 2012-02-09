@@ -9,7 +9,7 @@ set DBHOME = .
 
 #
 # TESTSDIR:  This is the directory where the files of test queries
-# are.  
+# are.
 #
 set TESTSDIR = .
 
@@ -38,7 +38,7 @@ if ( $#argv == 0 ) then
 	foreach queryfile ( `ls $TESTSDIR/ql_test.*` )
 		echo running test '#' $queryfile:e '****************' >> $OUTPUT
 		$DBHOME/dbcreate  $TESTDB
-		$DBHOME/redbase   $TESTDB < $queryfile >>& $OUTPUT
+		$DBHOME/tinybase $TESTDB < $queryfile >>& $OUTPUT
 		$DBHOME/dbdestroy $TESTDB
 	end
 
@@ -51,7 +51,7 @@ else
 		if ( -r $TESTSDIR/ql_test.$testnum ) then
 			echo running test '#' $testnum '****************' >> $OUTPUT
 			$DBHOME/dbcreate  $TESTDB
-			$DBHOME/redbase   $TESTDB < $TESTSDIR/ql_test.$testnum >>& $OUTPUT
+			$DBHOME/tinybase $TESTDB < $TESTSDIR/ql_test.$testnum >>& $OUTPUT
 			$DBHOME/dbdestroy $TESTDB
 		else
 			echo I can not find a test number $testnum. >> $OUTPUT
