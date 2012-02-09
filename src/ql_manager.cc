@@ -30,7 +30,7 @@ using namespace std;
 //
 // Constructor for the QL Manager
 //
-QL_Manager::QL_Manager(SM_Manager &smm, IX_Manager &ixm, RM_Manager &rmm) : smm(smm), ixm(ixm), rmm(rmm)
+QL_Manager::QL_Manager(SM_Manager &smm, IX_Manager &ixm, RM_Manager &rmm) : smm(&smm), ixm(&ixm), rmm(&rmm)
 {
     // Can't stand unused variable warnings!
     assert (&smm && &ixm && &rmm);
@@ -137,12 +137,13 @@ RC QL_Manager::Delete(const char *relName,
     if(rc) return rc;
 
     // On ouvre la relation dans laquelle on veut supprimer les tuples
-    rc = rmm.OpenFile(relName, rmfh);
+    rc = rmm->OpenFile(relName, rmfh);
     if(rc) return rc;
 
     // On crée la racine
     QL_Iterator* racine;
-	rc = DeletePlan(racine, relName, nConditions, conditions);
+    Condition NO_COND = {{NULL,NULL}, NO_OP, 0, {NULL,NULL}, {INT,NULL}};
+	rc = DeletePlan(racine, relName, nConditions, conditions, NO_COND);
 	if(rc) return rc;
 
     // On récupère les attributs de la table
@@ -153,7 +154,7 @@ RC QL_Manager::Delete(const char *relName,
     indexes = new IX_IndexHandle[attrNb];
     for(int i = 0; i < attrNb; i++) {
     	if(attributes[i].indexNo != -1) {
-    		rc = ixm.OpenIndex(relName, attributes[i].indexNo, indexes[i]);
+    		rc = ixm->OpenIndex(relName, attributes[i].indexNo, indexes[i]);
     		if(rc) return rc;
     	}
     }
@@ -165,6 +166,8 @@ RC QL_Manager::Delete(const char *relName,
 	// On ouvre l'itérateur que l'on récupère grâce au plan
 	rc = racine->Open();
 	if(rc) return rc;
+
+	cout << "racine opened" << endl;
 
 	// On parcourt l'itérateur et on affiche chaque tuple trouvé
 	RM_Record rec;
@@ -207,13 +210,13 @@ RC QL_Manager::Delete(const char *relName,
 	// On ferme les indexes
 	for (int i = 0; i < attrNb; i++) {
 		if (attributes[i].indexNo != -1) {
-			rc = ixm.CloseIndex(indexes[i]);
+			rc = ixm->CloseIndex(indexes[i]);
 			if(rc) return rc;
 		}
 	}
 
 	// On ferme la relation
-	rc = rmm.CloseFile(rmfh);
+	rc = rmm->CloseFile(rmfh);
 	if(rc) return rc;
 
     cout << "Delete\n";
@@ -257,7 +260,7 @@ RC QL_Manager::Update(const char *relName,
 	// On vérifie l'attribut de l'update
 	AttrCat left;
 	RID rid;
-	rc = smm.GetAttrTpl(relName, updAttr.attrName, left, rid);
+	rc = smm->GetAttrTpl(relName, updAttr.attrName, left, rid);
 	if(rc) return rc;
 
 	if(bIsValue) {
@@ -266,7 +269,7 @@ RC QL_Manager::Update(const char *relName,
 		}
 	} else {
 		AttrCat right;
-		rc = smm.GetAttrTpl(relName, rhsRelAttr.attrName, right, rid);
+		rc = smm->GetAttrTpl(relName, rhsRelAttr.attrName, right, rid);
 		if(rc) return rc;
 
 		if (right.attrType != left.attrType)
@@ -274,12 +277,13 @@ RC QL_Manager::Update(const char *relName,
 	}
 
 	// On ouvre la relation dans laquelle on veut supprimer les tuples
-	rc = rmm.OpenFile(relName, rmfh);
+	rc = rmm->OpenFile(relName, rmfh);
 	if(rc) return rc;
 
 	// On crée la racine
 	QL_Iterator* racine;
-	rc = UpdatePlan(racine, relName, updAttr.attrName, nConditions, conditions);
+	Condition NO_COND = {{NULL,NULL}, NO_OP, 0, {NULL,NULL}, {INT,NULL}};
+	rc = UpdatePlan(racine, relName, updAttr.attrName, nConditions, conditions, NO_COND);
 	if(rc) return rc;
 
 	// On récupère les attributs de la table
@@ -298,7 +302,7 @@ RC QL_Manager::Update(const char *relName,
 
 	// On ouvre juste l'index sur iLeft (modification de la valeur -> clé)
 	if(attributes[iLeft].indexNo != -1) {
-		rc = ixm.OpenIndex(relName, attributes[iLeft].indexNo, indexes);
+		rc = ixm->OpenIndex(relName, attributes[iLeft].indexNo, indexes);
 		if(rc) return rc;
 	}
 
@@ -361,12 +365,12 @@ RC QL_Manager::Update(const char *relName,
 
 	// On ferme l'index
 	if (attributes[iLeft].indexNo != -1) {
-		rc = ixm.CloseIndex(indexes);
+		rc = ixm->CloseIndex(indexes);
 		if(rc) return rc;
 	}
 
 	// On ferme la relation
-	rc = rmm.CloseFile(rmfh);
+	rc = rmm->CloseFile(rmfh);
 	if(rc) return rc;
 
     cout << "Update\n";
@@ -389,12 +393,12 @@ RC QL_Manager::Update(const char *relName,
 // DeletePlan
 //
 RC QL_Manager::DeletePlan(QL_Iterator*& racine, const char *relName,
-        					int nConditions, const Condition conditions[]) {
+        					int nConditions, const Condition conditions[], const Condition& noCond) {
 	RC rc;
 	AttrCat attrTpl;
 	RID rid;
 
-	Condition NO_COND = {{NULL,NULL}, NO_OP, 0, {NULL,NULL}, {INT,NULL}};
+
 
 	int idxCond = -1;
 	AttrType idxCondType;
@@ -410,7 +414,7 @@ RC QL_Manager::DeletePlan(QL_Iterator*& racine, const char *relName,
 			continue;
 		}
 
-		rc = smm.GetAttrTpl(relName, conditions[i].lhsAttr.attrName, attrTpl, rid);
+		rc = smm->GetAttrTpl(relName, conditions[i].lhsAttr.attrName, attrTpl, rid);
 		if(rc) return rc;
 
 		// Vérifions si l'attribut est un index
@@ -441,11 +445,14 @@ RC QL_Manager::DeletePlan(QL_Iterator*& racine, const char *relName,
 
 	// Mise en place de l'itérateur niveau feuille
 	if(idxCond != -1) {
-		racine = new IT_IndexScan(rmm, smm, ixm, relName, conditions[idxCond].lhsAttr.attrName, conditions[idxCond]);
+		racine = new IT_IndexScan(rmm, smm, ixm, relName, conditions[idxCond].lhsAttr.attrName, conditions[idxCond], rc);
+		if(rc) return rc;
 	} else if(fileCond != -1) {
-		racine = new IT_FileScan(rmm, smm, relName, conditions[fileCond]);
+		racine = new IT_FileScan(rmm, smm, relName, conditions[fileCond], rc);
+		if(rc) return rc;
 	} else {
-		racine = new IT_FileScan(rmm, smm, relName, NO_COND);
+		racine = new IT_FileScan(rmm, smm, relName, noCond, rc);
+		if(rc) return rc;
 	}
 
 	// Maintenant on doit appliquer un filtre par condition autre que celle du scan
@@ -462,12 +469,10 @@ RC QL_Manager::DeletePlan(QL_Iterator*& racine, const char *relName,
 // UpdatePlan
 //
 RC QL_Manager::UpdatePlan(QL_Iterator*& racine, const char *relName, const char* attrName,
-        					int nConditions, const Condition conditions[]) {
+        					int nConditions, const Condition conditions[], const Condition & noCond) {
 	RC rc;
 	AttrCat attrTpl;
 	RID rid;
-
-	Condition NO_COND = {{NULL,NULL}, NO_OP, 0, {NULL,NULL}, {INT,NULL}};
 
 	int idxCond = -1;
 	AttrType idxCondType;
@@ -488,7 +493,7 @@ RC QL_Manager::UpdatePlan(QL_Iterator*& racine, const char *relName, const char*
 		if(strcmp(conditions[i].lhsAttr.attrName, attrName) == 0)
 			continue;
 
-		rc = smm.GetAttrTpl(relName, conditions[i].lhsAttr.attrName, attrTpl, rid);
+		rc = smm->GetAttrTpl(relName, conditions[i].lhsAttr.attrName, attrTpl, rid);
 		if(rc) return rc;
 
 		// Vérifions si l'attribut est un index
@@ -519,11 +524,14 @@ RC QL_Manager::UpdatePlan(QL_Iterator*& racine, const char *relName, const char*
 
 	// Mise en place de l'itérateur niveau feuille
 	if(idxCond != -1) {
-		racine = new IT_IndexScan(rmm, smm, ixm, relName, conditions[idxCond].lhsAttr.attrName, conditions[idxCond]);
+		racine = new IT_IndexScan(rmm, smm, ixm, relName, conditions[idxCond].lhsAttr.attrName, conditions[idxCond], rc);
+		if(rc) return rc;
 	} else if(fileCond != -1) {
-		racine = new IT_FileScan(rmm, smm, relName, conditions[fileCond]);
+		racine = new IT_FileScan(rmm, smm, relName, conditions[fileCond], rc);
+		if(rc) return rc;
 	} else {
-		racine = new IT_FileScan(rmm, smm, relName, NO_COND);
+		racine = new IT_FileScan(rmm, smm, relName, noCond, rc);
+		if(rc) return rc;
 	}
 
 	// Maintenant on doit appliquer un filtre par condition autre que celle du scan
@@ -580,7 +588,7 @@ RC QL_Manager::checkRelations(int nRelations, const char * const relations[]) {
 	int i = 0;
 	for (i = 0; i < nRelations; i++) {
 		// On vérifie l'existence de la relation
-		rc = smm.GetRelTpl(relations[i], relTpl, rid);
+		rc = smm->GetRelTpl(relations[i], relTpl, rid);
 		if (rc == SM_NOTBLFOUND) {
 			// La table n'existe pas
 			return QL_NOTBLFOUND;
@@ -641,7 +649,7 @@ RC QL_Manager::checkSelAttrs (int nSelAttrs, const RelAttr selAttrs[]) {
 		}
 
 		// On vérifie que l'attribut existe
-		rc = smm.GetAttrTpl(relName, selAttrs[i].attrName, attrTpl, rid);
+		rc = smm->GetAttrTpl(relName, selAttrs[i].attrName, attrTpl, rid);
 		if (rc == SM_BADATTR) {
 			return QL_ATTRNOTFOUND;
 		} else if (rc) {
@@ -687,7 +695,7 @@ RC QL_Manager::checkWhereAttrs (int nConditions, const Condition conditions[]) {
 		}
 
 		// On vérifie que l'attribut gauche existe
-		rc = smm.GetAttrTpl(relNameL, conditions[i].lhsAttr.attrName, attrTplLeft, rid);
+		rc = smm->GetAttrTpl(relNameL, conditions[i].lhsAttr.attrName, attrTplLeft, rid);
 		if (rc == SM_BADATTR) {
 			return QL_ATTRNOTFOUND;
 		} else if (rc) {
@@ -714,7 +722,7 @@ RC QL_Manager::checkWhereAttrs (int nConditions, const Condition conditions[]) {
 			}
 
 			// On vérifie que l'attribut droite existe
-			rc = smm.GetAttrTpl(relNameR, conditions[i].rhsAttr.attrName, attrTplRight, rid);
+			rc = smm->GetAttrTpl(relNameR, conditions[i].rhsAttr.attrName, attrTplRight, rid);
 			if (rc == SM_BADATTR) {
 				return QL_ATTRNOTFOUND;
 			} else if (rc) {

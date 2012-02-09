@@ -25,17 +25,17 @@ bool Comparator::Compare(const void* pData) const {
 	case INT:
 		switch(op) {
 		case LT_OP:
-			return *((int *)value) < *((int *)value);
+			return *((int *)value) < *((int *)pData);
 		case LE_OP:
-			return *((int *)value) <= *((int *)value);
+			return *((int *)value) <= *((int *)pData);
 		case EQ_OP:
-			return *((int *)value) == *((int *)value);
+			return *((int *)value) == *((int *)pData);
 		case NE_OP:
-			return *((int *)value) != *((int *)value);
+			return *((int *)value) != *((int *)pData);
 		case GT_OP:
-			return *((int *)value) > *((int *)value);
+			return *((int *)value) > *((int *)pData);
 		case GE_OP:
-			return *((int *)value) >= *((int *)value);
+			return *((int *)value) >= *((int *)pData);
 		default:
 			return true;
 		}
@@ -43,17 +43,17 @@ bool Comparator::Compare(const void* pData) const {
 	case FLOAT:
 		switch(op) {
 		case LT_OP:
-			return *((float *)value) < *((float *)value);
+			return *((float *)value) < *((float *)pData);
 		case LE_OP:
-			return *((float *)value) <= *((float *)value);
+			return *((float *)value) <= *((float *)pData);
 		case EQ_OP:
-			return *((float *)value) == *((float *)value);
+			return *((float *)value) == *((float *)pData);
 		case NE_OP:
-			return *((float *)value) != *((float *)value);
+			return *((float *)value) != *((float *)pData);
 		case GT_OP:
-			return *((float *)value) > *((float *)value);
+			return *((float *)value) > *((float *)pData);
 		case GE_OP:
-			return *((float *)value) >= *((float *)value);
+			return *((float *)value) >= *((float *)pData);
 		default:
 			return true;
 		}
@@ -61,17 +61,17 @@ bool Comparator::Compare(const void* pData) const {
 	case STRING:
 		switch(op) {
 		case LT_OP:
-			return (strcmp(((char *)value), ((char *)value)) < 0);
+			return (strcmp(((char *)value), ((char *)pData)) < 0);
 		case LE_OP:
-			return (strcmp(((char *)value), ((char *)value)) <= 0);
+			return (strcmp(((char *)value), ((char *)pData)) <= 0);
 		case EQ_OP:
-			return (strcmp(((char *)value), ((char *)value)) == 0);
+			return (strcmp(((char *)value), ((char *)pData)) == 0);
 		case NE_OP:
-			return (strcmp(((char *)value), ((char *)value)) != 0);
+			return (strcmp(((char *)value), ((char *)pData)) != 0);
 		case GT_OP:
-			return (strcmp(((char *)value), ((char *)value)) > 0);
+			return (strcmp(((char *)value), ((char *)pData)) > 0);
 		case GE_OP:
-			return (strcmp(((char *)value), ((char *)value)) >= 0);
+			return (strcmp(((char *)value), ((char *)pData)) >= 0);
 		default:
 			return true;
 		}

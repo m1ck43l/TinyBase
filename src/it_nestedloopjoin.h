@@ -13,7 +13,7 @@
 
 class IT_NestedLoopJoin : public virtual QL_Iterator {
 public:
-	IT_NestedLoopJoin(QL_Iterator* left, QL_Iterator* right, Condition _cond);
+	IT_NestedLoopJoin(QL_Iterator* left, QL_Iterator* right, const Condition& _cond);
 	virtual ~IT_NestedLoopJoin();
 
 	RC Open();
@@ -26,7 +26,7 @@ private:
 	CompOp op;
 	DataAttrInfo leftAttr, rightAttr;
 
-	Condition cond;
+	const Condition* cond;
 
 	int lengthL, lengthR;
 	char* pLeft;

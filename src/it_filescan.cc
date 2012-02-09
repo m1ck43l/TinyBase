@@ -7,9 +7,11 @@
 
 #include "it_filescan.h"
 
-IT_FileScan::IT_FileScan(RM_Manager rmm, SM_Manager smm, const char * _relName,
-						 Condition scanCond)
-					: rmm(&rmm), smm(&smm), relName(_relName), scanCond(scanCond) {
+IT_FileScan::IT_FileScan(RM_Manager* _rmm, SM_Manager* _smm, const char * _relName,
+						 const Condition& _scanCond, RC& rc)
+					: rmm(_rmm), smm(_smm), relName(_relName), scanCond(&_scanCond) {
+
+	rc = smm->GetAttributesFromRel(relName, attrs, attrCount);
 }
 
 IT_FileScan::~IT_FileScan() {
@@ -25,12 +27,15 @@ RC IT_FileScan::Open() {
 	RID rid;
 	AttrCat attrCat;
 
-	// Si on a une condition sur le scan on récupère l'attribut
-	rc = smm->GetAttrTpl(relName, scanCond.lhsAttr.attrName, attrCat, rid);
-	if(rc) return rc;
+	std::cout << "Before --> " << (scanCond->op != NO_OP) << std::endl;
 
-	rc = smm->GetAttributesFromRel(relName, attrs, attrCount);
-	if(rc) return rc;
+	// Si on a une condition sur le scan on récupère l'attribut
+	if (scanCond->op != NO_OP) {
+		rc = smm->GetAttrTpl(relName, scanCond->lhsAttr.attrName, attrCat, rid);
+		if(rc) return rc;
+	}
+
+	std::cout << "After --> " << (scanCond->op != NO_OP) << std::endl;
 
 	rc = rmm->OpenFile(relName, rmfh);
 	if(rc) return rc;
@@ -39,8 +44,8 @@ RC IT_FileScan::Open() {
 	                    attrCat.attrType,
 	                    attrCat.attrLength,
 	                    attrCat.offset,
-	                    scanCond.op,
-	                    scanCond.rhsValue.data,
+	                    scanCond->op,
+	                    scanCond->rhsValue.data,
 	                    NO_HINT);
 
 	bIsOpen = true;

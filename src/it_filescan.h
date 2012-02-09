@@ -13,7 +13,7 @@
 
 class IT_FileScan : public virtual QL_Iterator {
 public:
-	IT_FileScan(RM_Manager rmm, SM_Manager smm, const char * relName, Condition scanCond);
+	IT_FileScan(RM_Manager* rmm, SM_Manager* smm, const char * relName, const Condition& scanCond, RC& rc);
 	virtual ~IT_FileScan();
 
 	RC Open();
@@ -28,7 +28,7 @@ private:
 	RM_FileHandle rmfh;
 	RM_FileScan rmfs;
 
-	Condition& scanCond;
+	const Condition* scanCond;
 };
 
 #endif /* IT_FILESCAN_H_ */

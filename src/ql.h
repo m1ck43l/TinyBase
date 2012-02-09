@@ -25,6 +25,7 @@
 
 #include "ql_iterator.h"
 
+
 //
 // QL_Manager: query language (DML)
 //
@@ -63,16 +64,16 @@ private:
 
     // UpdatePLan
     RC UpdatePlan(QL_Iterator*& racine, const char *relName, const char* attrName,
-			int nConditions, const Condition conditions[]);
+			int nConditions, const Condition conditions[], const Condition& noCond);
 
     // DeletePlan
     RC DeletePlan(QL_Iterator*& racine, const char *relName,
-			int nConditions, const Condition conditions[]);
+			int nConditions, const Condition conditions[], const Condition& noCond);
     bool IsBetter(AttrType a, AttrType b);
 
-    SM_Manager &smm;
-    IX_Manager &ixm;
-    RM_Manager &rmm;
+    SM_Manager *smm;
+    IX_Manager *ixm;
+    RM_Manager *rmm;
 
     std::vector<std::string> relationsMap;
 };

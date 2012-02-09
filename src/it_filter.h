@@ -23,7 +23,7 @@ private:
 	QL_Iterator* it;
 	const Condition* cond;
 
-	DataAttrInfo leftAttr;
+	DataAttrInfo* leftAttr;
 };
 
 #endif /* IT_FILTER_H_ */

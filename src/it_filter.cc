@@ -9,9 +9,13 @@
 
 IT_Filter::IT_Filter(QL_Iterator* it, const Condition& _cond) : it(it), cond(&_cond) {
 	attrs = it->getRelAttr();
+	attrCount = it->getAttrCount();
 	for(int i = 0; i < it->getAttrCount(); i++) {
-		if (strcmp(cond->lhsAttr.relName, attrs[i].relName) == 0 && strcmp(cond->lhsAttr.attrName, attrs[i].attrName) == 0) {
-			leftAttr = attrs[i];
+		// Si le relName de la condition est NULL on ne compare que les attrName
+		// On suppose que les verifs ont été faites avant
+		if ( ((cond->lhsAttr.relName == NULL) || (cond->lhsAttr.relName != NULL && strcmp(cond->lhsAttr.relName, attrs[i].relName) == 0))
+				&& strcmp(cond->lhsAttr.attrName, attrs[i].attrName) == 0) {
+			leftAttr = &attrs[i];
 		}
 	}
 }
@@ -62,7 +66,7 @@ RC IT_Filter::GetNext(RM_Record& tpl) {
 		if(rc) return rc;
 
 		bool result = false;
-		Comparator comp(leftAttr.attrType, leftAttr.attrLength, leftAttr.offset, cond->op, pData);
+		Comparator comp(leftAttr->attrType, leftAttr->attrLength, leftAttr->offset, cond->op, pData);
 
 		if (cond->bRhsIsAttr) {
 			DataAttrInfo* attrs = it->getRelAttr();

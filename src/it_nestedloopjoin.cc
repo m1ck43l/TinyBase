@@ -7,19 +7,19 @@
 
 #include "it_nestedloopjoin.h"
 
-IT_NestedLoopJoin::IT_NestedLoopJoin(QL_Iterator* _left, QL_Iterator* _right, Condition _cond)
-											: LeftIterator(_left), RightIterator(_right), cond(_cond) {
+IT_NestedLoopJoin::IT_NestedLoopJoin(QL_Iterator* _left, QL_Iterator* _right, const Condition& _cond)
+											: LeftIterator(_left), RightIterator(_right), cond(&_cond) {
 	// Nous avons besoin de savoir dans quel itérateur est le membre gauche/droit
 	// de notre condition...
 	bool trouve = false;
 	DataAttrInfo* attrsL = LeftIterator->getRelAttr();
 	for(int j = 0; j < LeftIterator->getAttrCount(); j++) {
-		if (strcmp(cond.lhsAttr.relName, attrsL[j].relName) == 0 && strcmp(cond.lhsAttr.attrName, attrsL[j].attrName) == 0) {
+		if (strcmp(cond->lhsAttr.relName, attrsL[j].relName) == 0 && strcmp(cond->lhsAttr.attrName, attrsL[j].attrName) == 0) {
 			leftAttr = attrsL[j];
 			trouve = true;
 		}
 
-		if (strcmp(cond.rhsAttr.relName, attrsL[j].relName) == 0 && strcmp(cond.rhsAttr.attrName, attrsL[j].attrName) == 0) {
+		if (strcmp(cond->rhsAttr.relName, attrsL[j].relName) == 0 && strcmp(cond->rhsAttr.attrName, attrsL[j].attrName) == 0) {
 			rightAttr = attrsL[j];
 		}
 	}
@@ -28,12 +28,12 @@ IT_NestedLoopJoin::IT_NestedLoopJoin(QL_Iterator* _left, QL_Iterator* _right, Co
 	for(int j = 0; j < RightIterator->getAttrCount(); j++) {
 		if(!trouve) {
 				// L'attribut gauche de la condition est dans l'arbre droit...
-				if (strcmp(cond.lhsAttr.relName, attrsR[j].relName) == 0 && strcmp(cond.lhsAttr.attrName, attrsR[j].attrName) == 0) {
+				if (strcmp(cond->lhsAttr.relName, attrsR[j].relName) == 0 && strcmp(cond->lhsAttr.attrName, attrsR[j].attrName) == 0) {
 					leftAttr = attrsR[j];
 				}
 		} else {
 			// L'attribut droit de la condition est dans l'arbre droit...
-			if (strcmp(cond.rhsAttr.relName, attrsR[j].relName) == 0 && strcmp(cond.rhsAttr.attrName, attrsR[j].attrName) == 0) {
+			if (strcmp(cond->rhsAttr.relName, attrsR[j].relName) == 0 && strcmp(cond->rhsAttr.attrName, attrsR[j].attrName) == 0) {
 				rightAttr = attrsR[j];
 			}
 		}
@@ -41,9 +41,9 @@ IT_NestedLoopJoin::IT_NestedLoopJoin(QL_Iterator* _left, QL_Iterator* _right, Co
 
 	// A ce niveau: leftAttr -> attribut de l'arbre de gauche, rightAttr -> attribut de l'arbre de droite
 	// Nous devons maintenant changer ou non l'opérateur
-	op = cond.op;
+	op = cond->op;
 	if(!trouve) {
-		switch(cond.op) {
+		switch(cond->op) {
 		case NO_OP:
 		case EQ_OP:
 		case NE_OP:

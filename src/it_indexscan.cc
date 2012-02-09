@@ -7,9 +7,10 @@
 
 #include "it_indexscan.h"
 
-IT_IndexScan::IT_IndexScan(RM_Manager rmm, SM_Manager smm, IX_Manager ixm, const char * _relName, const char * _indexName,
-		 Condition scanCond)
-	: rmm(&rmm), smm(&smm), ixm(&ixm), relName(_relName), indexName(_indexName), scanCond(scanCond) {
+IT_IndexScan::IT_IndexScan(RM_Manager* rmm, SM_Manager* _smm, IX_Manager* ixm, const char * _relName, const char * _indexName,
+		 const Condition& _scanCond, RC& rc)
+	: rmm(rmm), smm(_smm), ixm(ixm), relName(_relName), indexName(_indexName), scanCond(&_scanCond) {
+	rc = smm->GetAttributesFromRel(relName, attrs, attrCount);
 }
 
 IT_IndexScan::~IT_IndexScan() {
@@ -28,9 +29,6 @@ RC IT_IndexScan::Open() {
 	rc = smm->GetAttrTpl(relName, indexName, attrCat, rid);
 	if(rc) return rc;
 
-	rc = smm->GetAttributesFromRel(relName, attrs, attrCount);
-	if(rc) return rc;
-
 	rc = rmm->OpenFile(relName, rmfh);
 	if(rc) return rc;
 
@@ -38,8 +36,8 @@ RC IT_IndexScan::Open() {
 	if(rc) return rc;
 
 	rc = ixis.OpenScan(ixih,
-	                    scanCond.op,
-	                    scanCond.rhsValue.data,
+	                    scanCond->op,
+	                    scanCond->rhsValue.data,
 	                    NO_HINT);
 
 	bIsOpen = true;
