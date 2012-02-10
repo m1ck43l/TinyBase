@@ -1,0 +1,519 @@
+QL layer test sequence
+running test # 1 ****************
+
+REDBASE >> ls
+attrcat
+relcat
+
+REDBASE >> create table student (no = i, name = c20, dept = c4, GPA = f, comment = c3);
+CreateTable
+   relName     =student
+   attrCount   =5
+   attributes[0].attrName=no   attrType=INT   attrLength=4
+   attributes[1].attrName=name   attrType=STRING   attrLength=20
+   attributes[2].attrName=dept   attrType=STRING   attrLength=4
+   attributes[3].attrName=GPA   attrType=FLOAT   attrLength=4
+   attributes[4].attrName=comment   attrType=STRING   attrLength=3
+
+REDBASE >> load student("../../data/student.data");
+Load
+   relName =student
+   fileName=../../data/student.data
+
+REDBASE >> ls
+attrcat
+relcat
+student
+
+REDBASE >> Query plan display turned on.
+
+REDBASE >> print student;
+Print
+   relName=student
+
+no          name                dept GPA         comment 
+---------------------------------------------------------
+1           Adams               MSCS 3.450000    foo     
+2           Bennett             MSAI 4.000000    foo     
+3           Cagney              MSCS 3.250000    foo     
+4           Downer              MSAI 3.950000    foo     
+5           Everett             MSCS 2.950000    foo     
+6           Forest              MSAI 3.840000    foo     
+7           Grover              MSCS 3.200000    foo     
+8           Harrison            MSAI 3.900000    foo     
+9           Iolanthe            MSCS 2.750000    foo     
+10          Jordan              MSAI 3.850000    foo     
+11          Kilroy              MSCS 3.000000    foo     
+12          Lambeth             MSAI 4.000000    foo     
+13          MacBeth             MSCS 2.500000    foo     
+14          Noorda              MSAI 3.900000    foo     
+15          Othello             MSCS 3.300000    foo     
+
+15 tuple(s).
+
+REDBASE >> select  *
+ from  student
+;
+Select
+   nSelAttrs = 1
+   selAttrs[0]:NULL.*
+   nRelations = 1
+   relations[0] student
+   nCondtions = 0
+
+
+Query Plan :
+    Projection 
+        FileScan : [student] : No Condition
+
+
+no          name                dept GPA         comment 
+---------------------------------------------------------
+1           Adams               MSCS 3.450000    foo     
+2           Bennett             MSAI 4.000000    foo     
+3           Cagney              MSCS 3.250000    foo     
+4           Downer              MSAI 3.950000    foo     
+5           Everett             MSCS 2.950000    foo     
+6           Forest              MSAI 3.840000    foo     
+7           Grover              MSCS 3.200000    foo     
+8           Harrison            MSAI 3.900000    foo     
+9           Iolanthe            MSCS 2.750000    foo     
+10          Jordan              MSAI 3.850000    foo     
+11          Kilroy              MSCS 3.000000    foo     
+12          Lambeth             MSAI 4.000000    foo     
+13          MacBeth             MSCS 2.500000    foo     
+14          Noorda              MSAI 3.900000    foo     
+15          Othello             MSCS 3.300000    foo     
+
+15 tuple(s).
+
+REDBASE >> select  *
+ from  student
+where  no > 5;
+Select
+   nSelAttrs = 1
+   selAttrs[0]:NULL.*
+   nRelations = 1
+   relations[0] student
+   nCondtions = 1
+   conditions[0]:
+      lhsAttr:NULL.no
+      op= >
+      bRshIsAttr=FALSE
+      rhsValue:AttrType: INT *(int *)data=5
+
+
+Query Plan :
+    Projection 
+        FileScan : [student] : {NULL.no  > 5}
+
+
+no          name                dept GPA         comment 
+---------------------------------------------------------
+6           Forest              MSAI 3.840000    foo     
+7           Grover              MSCS 3.200000    foo     
+8           Harrison            MSAI 3.900000    foo     
+9           Iolanthe            MSCS 2.750000    foo     
+10          Jordan              MSAI 3.850000    foo     
+11          Kilroy              MSCS 3.000000    foo     
+12          Lambeth             MSAI 4.000000    foo     
+13          MacBeth             MSCS 2.500000    foo     
+14          Noorda              MSAI 3.900000    foo     
+15          Othello             MSCS 3.300000    foo     
+
+10 tuple(s).
+
+REDBASE >> create table soaps (soapid = i, sname = c28, network = c4, rating = f);
+CreateTable
+   relName     =soaps
+   attrCount   =4
+   attributes[0].attrName=soapid   attrType=INT   attrLength=4
+   attributes[1].attrName=sname   attrType=STRING   attrLength=28
+   attributes[2].attrName=network   attrType=STRING   attrLength=4
+   attributes[3].attrName=rating   attrType=FLOAT   attrLength=4
+
+REDBASE >> create table stars (starid = i, stname = c20, plays = c12, soapid = i);
+CreateTable
+   relName     =stars
+   attrCount   =4
+   attributes[0].attrName=starid   attrType=INT   attrLength=4
+   attributes[1].attrName=stname   attrType=STRING   attrLength=20
+   attributes[2].attrName=plays   attrType=STRING   attrLength=12
+   attributes[3].attrName=soapid   attrType=INT   attrLength=4
+
+REDBASE >> load soaps("../../data/soaps.data");
+Found bad record at line 5
+Load
+   relName =soaps
+   fileName=../../data/soaps.data
+
+REDBASE >> print soaps;
+Print
+   relName=soaps
+
+soapid      sname                       network rating      
+------------------------------------------------------------
+0           Days of Our Lives           NBC     7.020000    
+1           General Hospital            ABC     9.810000    
+2           Guiding Light               CBS     4.020000    
+3           One Life to Live            ABC     2.310000    
+5           The Young and the Restless  CBS     5.500000    
+6           As the World Turns          CBS     7.000000    
+7           Another World               NBC     1.970000    
+8           All My Children             ABC     8.820000    
+
+8 tuple(s).
+
+REDBASE >> create index stars(starid);
+CreateIndex
+   relName =stars
+   attrName=starid
+
+REDBASE >> create index stars(stname);
+CreateIndex
+   relName =stars
+   attrName=stname
+
+REDBASE >> load stars("../../data/stars.data");
+Load
+   relName =stars
+   fileName=../../data/stars.data
+
+REDBASE >> select  *
+ from  soaps, stars
+where  soaps.soapid = stars.soapid;
+Select
+   nSelAttrs = 1
+   selAttrs[0]:NULL.*
+   nRelations = 2
+   relations[0] soaps
+   relations[1] stars
+   nCondtions = 1
+   conditions[0]:
+      lhsAttr:soaps.soapid
+      op= =
+      bRhsIsAttr=TRUE 
+      rhsAttr:stars.soapid
+
+
+Query Plan :
+    Projection 
+        NestedLoopJoin : {soaps.soapid  = stars.soapid}
+            FileScan : [soaps] : No Condition
+            FileScan : [stars] : No Condition
+
+
+soaps.soapid sname                       network rating      starid      stname              plays       stars.soapid 
+----------------------------------------------------------------------------------------------------------------------
+0            Days of Our Lives           NBC     7.020000    11          Ross Charlotte      Eve         0            
+0            Days of Our Lives           NBC     7.020000    19          Ashford Matthew     Jack        0            
+0            Days of Our Lives           NBC     7.020000    28          Evans Mary Beth     Kayla       0            
+1            General Hospital            ABC     9.810000    25          Hughes Finola       Anna        1            
+1            General Hospital            ABC     9.810000    26          Rogers Tristan      Robert      1            
+1            General Hospital            ABC     9.810000    27          Richardson Cheryl   Jenny       1            
+2            Guiding Light               CBS     4.020000    5           Ehlers Beth         Harley      2            
+2            Guiding Light               CBS     4.020000    15          Hammer Jay          Fletcher    2            
+2            Guiding Light               CBS     4.020000    16          Sloan Tina          Lillian     2            
+3            One Life to Live            ABC     2.310000    7           Elliot Patricia     Renee       3            
+3            One Life to Live            ABC     2.310000    10          Walker Nicholas     Max         3            
+3            One Life to Live            ABC     2.310000    17          DuClos Danielle     Lisa        3            
+3            One Life to Live            ABC     2.310000    18          Tuck Jessica        Megan       3            
+5            The Young and the Restless  CBS     5.500000    3           Linder Kate         Esther      5            
+5            The Young and the Restless  CBS     5.500000    4           Cooper Jeanne       Katherine   5            
+5            The Young and the Restless  CBS     5.500000    8           Hutchinson Fiona    Gabrielle   5            
+5            The Young and the Restless  CBS     5.500000    9           Carey Phil          Asa         5            
+5            The Young and the Restless  CBS     5.500000    13          Douglas Jerry       John        5            
+6            As the World Turns          CBS     7.000000    0           Hayes Kathryn       Kim         6            
+6            As the World Turns          CBS     7.000000    1           DeFreitas Scott     Andy        6            
+7            Another World               NBC     1.970000    14          Holbrook Anna       Sharlene    7            
+7            Another World               NBC     1.970000    22          McKinnon Mary       Denise      7            
+8            All My Children             ABC     8.820000    12          Anthony Eugene      Stan        8            
+8            All My Children             ABC     8.820000    21          Larson Jill         Opal        8            
+8            All My Children             ABC     8.820000    23          Barr Julia          Brooke      8            
+8            All My Children             ABC     8.820000    24          Borlenghi Matt      Brian       8            
+
+26 tuple(s).
+
+REDBASE >> select  *
+ from  soaps, stars
+where  soaps.soapid = stars.soapid and stars.starid > 5 and soaps.network = "NBC";
+Select
+   nSelAttrs = 1
+   selAttrs[0]:NULL.*
+   nRelations = 2
+   relations[0] soaps
+   relations[1] stars
+   nCondtions = 3
+   conditions[0]:
+      lhsAttr:soaps.soapid
+      op= =
+      bRhsIsAttr=TRUE 
+      rhsAttr:stars.soapid
+   conditions[1]:
+      lhsAttr:stars.starid
+      op= >
+      bRshIsAttr=FALSE
+      rhsValue:AttrType: INT *(int *)data=5
+   conditions[2]:
+      lhsAttr:soaps.network
+      op= =
+      bRshIsAttr=FALSE
+      rhsValue:AttrType: STRING (char *)data=NBC
+
+
+Query Plan :
+    Projection 
+        NestedLoopJoin : {soaps.soapid  = stars.soapid}
+            FileScan : [soaps] : {soaps.network  = "NBC"}
+            IndexScan : [stars], [starid] : {stars.starid  > 5}
+
+
+soaps.soapid sname                       network rating      starid      stname              plays       stars.soapid 
+----------------------------------------------------------------------------------------------------------------------
+0            Days of Our Lives           NBC     7.020000    11          Ross Charlotte      Eve         0            
+0            Days of Our Lives           NBC     7.020000    19          Ashford Matthew     Jack        0            
+0            Days of Our Lives           NBC     7.020000    28          Evans Mary Beth     Kayla       0            
+7            Another World               NBC     1.970000    14          Holbrook Anna       Sharlene    7            
+7            Another World               NBC     1.970000    22          McKinnon Mary       Denise      7            
+
+5 tuple(s).
+
+REDBASE >> select  *
+ from  soaps, stars
+where  soaps.soapid = stars.soapid and stars.starid > 5 and soaps.network = "NBC" and stars.starid < 15;
+Select
+   nSelAttrs = 1
+   selAttrs[0]:NULL.*
+   nRelations = 2
+   relations[0] soaps
+   relations[1] stars
+   nCondtions = 4
+   conditions[0]:
+      lhsAttr:soaps.soapid
+      op= =
+      bRhsIsAttr=TRUE 
+      rhsAttr:stars.soapid
+   conditions[1]:
+      lhsAttr:stars.starid
+      op= >
+      bRshIsAttr=FALSE
+      rhsValue:AttrType: INT *(int *)data=5
+   conditions[2]:
+      lhsAttr:soaps.network
+      op= =
+      bRshIsAttr=FALSE
+      rhsValue:AttrType: STRING (char *)data=NBC
+   conditions[3]:
+      lhsAttr:stars.starid
+      op= <
+      bRshIsAttr=FALSE
+      rhsValue:AttrType: INT *(int *)data=15
+
+
+Query Plan :
+    Projection 
+        NestedLoopJoin : {soaps.soapid  = stars.soapid}
+            FileScan : [soaps] : {soaps.network  = "NBC"}
+            Filter : {stars.starid  < 15}
+                IndexScan : [stars], [starid] : {stars.starid  > 5}
+
+
+soaps.soapid sname                       network rating      starid      stname              plays       stars.soapid 
+----------------------------------------------------------------------------------------------------------------------
+0            Days of Our Lives           NBC     7.020000    11          Ross Charlotte      Eve         0            
+7            Another World               NBC     1.970000    14          Holbrook Anna       Sharlene    7            
+
+2 tuple(s).
+
+REDBASE >> delete soaps ;
+Delete
+   relName = soaps
+   nCondtions = 0
+
+
+Query Plan :
+    FileScan : [soaps] : No Condition
+
+
+soapid      sname                       network rating      
+------------------------------------------------------------
+0           Days of Our Lives           NBC     7.020000    
+1           General Hospital            ABC     9.810000    
+2           Guiding Light               CBS     4.020000    
+3           One Life to Live            ABC     2.310000    
+5           The Young and the Restless  CBS     5.500000    
+6           As the World Turns          CBS     7.000000    
+7           Another World               NBC     1.970000    
+8           All My Children             ABC     8.820000    
+
+8 tuple(s).
+
+REDBASE >> print soaps;
+Print
+   relName=soaps
+
+soapid      sname                       network rating      
+------------------------------------------------------------
+
+0 tuple(s).
+
+REDBASE >> delete stars where  stars.starid > 5;
+Delete
+   relName = stars
+   nCondtions = 1
+   conditions[0]:
+      lhsAttr:stars.starid
+      op= >
+      bRshIsAttr=FALSE
+      rhsValue:AttrType: INT *(int *)data=5
+
+
+Query Plan :
+    IndexScan : [stars], [starid] : {stars.starid  > 5}
+
+
+starid      stname              plays       soapid      
+--------------------------------------------------------
+6           Novak John          Keith       4           
+7           Elliot Patricia     Renee       3           
+8           Hutchinson Fiona    Gabrielle   5           
+9           Carey Phil          Asa         5           
+10          Walker Nicholas     Max         3           
+11          Ross Charlotte      Eve         0           
+12          Anthony Eugene      Stan        8           
+13          Douglas Jerry       John        5           
+14          Holbrook Anna       Sharlene    7           
+15          Hammer Jay          Fletcher    2           
+16          Sloan Tina          Lillian     2           
+17          DuClos Danielle     Lisa        3           
+18          Tuck Jessica        Megan       3           
+19          Ashford Matthew     Jack        0           
+20          Novak John          Keith       4           
+21          Larson Jill         Opal        8           
+22          McKinnon Mary       Denise      7           
+23          Barr Julia          Brooke      8           
+24          Borlenghi Matt      Brian       8           
+25          Hughes Finola       Anna        1           
+26          Rogers Tristan      Robert      1           
+27          Richardson Cheryl   Jenny       1           
+28          Evans Mary Beth     Kayla       0           
+
+23 tuple(s).
+
+REDBASE >> print stars;
+Print
+   relName=stars
+
+starid      stname              plays       soapid      
+--------------------------------------------------------
+0           Hayes Kathryn       Kim         6           
+1           DeFreitas Scott     Andy        6           
+2           Grahn Nancy         Julia       4           
+3           Linder Kate         Esther      5           
+4           Cooper Jeanne       Katherine   5           
+5           Ehlers Beth         Harley      2           
+
+6 tuple(s).
+
+REDBASE >> update student set  name =  "Good"where  GPA > 3.750000;
+Update
+   relName = student
+   updAttr:NULL.name
+   rhs is value: AttrType: STRING (char *)data=Good
+   nCondtions = 1
+   conditions[0]:
+      lhsAttr:NULL.GPA
+      op= >
+      bRshIsAttr=FALSE
+      rhsValue:AttrType: FLOAT *(float *)data=3.75
+
+
+Query Plan :
+    FileScan : [student] : {NULL.GPA  > 3.75}
+
+
+no          name                dept GPA         comment 
+---------------------------------------------------------
+2           Bennett             MSAI 4.000000    foo     
+4           Downer              MSAI 3.950000    foo     
+6           Forest              MSAI 3.840000    foo     
+8           Harrison            MSAI 3.900000    foo     
+10          Jordan              MSAI 3.850000    foo     
+12          Lambeth             MSAI 4.000000    foo     
+14          Noorda              MSAI 3.900000    foo     
+
+7 tuple(s).
+
+REDBASE >> print student;
+Print
+   relName=student
+
+no          name                dept GPA         comment 
+---------------------------------------------------------
+1           Adams               MSCS 3.450000    foo     
+2           Good                MSAI 4.000000    foo     
+3           Cagney              MSCS 3.250000    foo     
+4           Good                MSAI 3.950000    foo     
+5           Everett             MSCS 2.950000    foo     
+6           Good                MSAI 3.840000    foo     
+7           Grover              MSCS 3.200000    foo     
+8           Good                MSAI 3.900000    foo     
+9           Iolanthe            MSCS 2.750000    foo     
+10          Good                MSAI 3.850000    foo     
+11          Kilroy              MSCS 3.000000    foo     
+12          Good                MSAI 4.000000    foo     
+13          MacBeth             MSCS 2.500000    foo     
+14          Good                MSAI 3.900000    foo     
+15          Othello             MSCS 3.300000    foo     
+
+15 tuple(s).
+
+REDBASE >> insert into soaps values (  6, "As the world Turns", "CBS", 7.000000);
+soapid      sname                       network rating      
+------------------------------------------------------------
+6           As the world Turns          CBS     7.000000    
+
+1 tuple(s).
+Insert
+   relName = soaps
+   nValues = 4
+   values[0]:AttrType: INT *(int *)data=6
+   values[1]:AttrType: STRING (char *)data=As the world Turns
+   values[2]:AttrType: STRING (char *)data=CBS
+   values[3]:AttrType: FLOAT *(float *)data=7
+
+REDBASE >> insert into soaps values (  0, "Days of Our Lives", "NBC", 7.020000);
+soapid      sname                       network rating      
+------------------------------------------------------------
+0           Days of Our Lives           NBC     7.020000    
+
+1 tuple(s).
+Insert
+   relName = soaps
+   nValues = 4
+   values[0]:AttrType: INT *(int *)data=0
+   values[1]:AttrType: STRING (char *)data=Days of Our Lives
+   values[2]:AttrType: STRING (char *)data=NBC
+   values[3]:AttrType: FLOAT *(float *)data=7.02
+
+REDBASE >> print soaps;
+Print
+   relName=soaps
+
+soapid      sname                       network rating      
+------------------------------------------------------------
+6           As the world Turns          CBS     7.000000    
+0           Days of Our Lives           NBC     7.020000    
+
+2 tuple(s).
+
+REDBASE >> Bye.
+running test # tester ****************
+
+REDBASE >> illegal character [#]
+ /bin/csh -f
+
+REDBASE >> illegal character [#]
+syntax error
+
+REDBASE >> Bye.
