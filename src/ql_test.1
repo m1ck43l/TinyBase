@@ -5,10 +5,45 @@
 
 !ls
 create table student(no i, name c20, dept c4, GPA f, comment c3);
-load student("../data/student.data");
+load student("../../data/student.data");
 !ls
+
+/* queryplans on; */
+queryplans on;
 
 print student;
 select * from student;
+
+create table soaps(soapid  i, sname  c28, network  c4, rating  f);
+create table stars(starid  i, stname  c20, plays  c12, soapid  i);
+
+/* load tuples from ./tests/stars.data */
+load soaps("../../data/soaps.data");
+
+/* print out contents of soaps */
+print soaps;
+
+/* build some indices on stars */
+create index stars(starid);
+create index stars(stname);
+
+/* load tuples from ./tests/stars.data */
+load stars("../../data/stars.data");
+
+select * from soaps, stars where soaps.soapid = stars.soapid;
+select * from soaps, stars where soaps.soapid = stars.soapid and stars.starid > 5 and soaps.network = "NBC";;
+
+delete from soaps;
+Print soaps;
+
+delete from stars where stars.starid > 5;
+Print stars;
+
+update student set name = "Good" where GPA > 3.75;
+Print student;
+
+insert into soaps values(6, "As the world Turns", "CBS", 7.00);
+insert into soaps values(0, "Days of Our Lives", "NBC", 7.02);
+Print soaps;
 
 exit;
