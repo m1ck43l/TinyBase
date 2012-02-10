@@ -46,7 +46,7 @@ public:
 				} else if(cond->rhsValue.type == FLOAT) {
 					output << *((float*)cond->rhsValue.data);
 				} else if(cond->rhsValue.type == STRING) {
-					output << "\"" << *((char*)cond->rhsValue.data) << "\"";
+					output << "\"" << ((char*)cond->rhsValue.data) << "\"";
 				}
 			}
 			output << "}";

@@ -13,6 +13,7 @@ queryplans on;
 
 print student;
 select * from student;
+select * from student where no > 5;
 
 create table soaps(soapid  i, sname  c28, network  c4, rating  f);
 create table stars(starid  i, stname  c20, plays  c12, soapid  i);
@@ -31,7 +32,8 @@ create index stars(stname);
 load stars("../../data/stars.data");
 
 select * from soaps, stars where soaps.soapid = stars.soapid;
-select * from soaps, stars where soaps.soapid = stars.soapid and stars.starid > 5 and soaps.network = "NBC";;
+select * from soaps, stars where soaps.soapid = stars.soapid and stars.starid > 5 and soaps.network = "NBC";
+select * from soaps, stars where soaps.soapid = stars.soapid and stars.starid > 5 and soaps.network = "NBC" and stars.starid < 15;
 
 delete from soaps;
 Print soaps;
