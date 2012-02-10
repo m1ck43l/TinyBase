@@ -1,0 +1,56 @@
+Module QL:
+
+    1. Structure choisie:
+
+On a choisi d'utiliser un système basé sur des itérateurs au lieu d'utiliser des tables temporaires. Nous avons donc implémenté 5 itérateurs:
+        - QL_Iterator: Interface des itérateurs. L'interface intègre notamment une fonction pour afficher simplement des conditions, une structure récursive d'affichage du query plan et les trois fonctions principales des itérateurs: Open(), GetNext(RM_Record&), Close()
+        - IT_Projection: réalise la projection, il fait la sélection des attributs à afficher
+        - IT_Filter: filtre un tuple selon une condition
+        - IT_NestedLoopJoin: effectue la jointure entre deux itérateurs en se basant sur une condition fournie
+        - IT_FileScan: implémente un FileScan sur une relation en se basant sur une condition fournie
+        - IT_IndexScan: implémente un IndexScan sur un index en se basant sur une condition
+
+Afin de faciliter la gestion des attributs et permettre d'utiliser un projecteur à la sortie de n'importe lequel des opérateurs, on stocke le tableau d'attributs qui correspond au tuple retourné par GetNext() de notre itérateur au sein de cet itérateur.
+Ainsi sur l'opérateur de jointure, le tableau d'attributs sera la concaténation des attributs de l'itérateur gauche avec les attributs de l'itérateur droit. On conserve avec cette méthode une cohérence à tout instant entre les attributs et les tuples retournés.
+
+
+    2. Optimisation:
+
+Nous n'avions pas mis en place de statistiques sur les relations/index telles que nombre de tuples, ... Par conséquent nous n'avons pas implémenté d'optimisation lors de la sélection des jointures (faire la jointure avec les tables ayant le moins de tuples, ...).
+
+Toutefois, on a préféré effectuer les filtres avant les jointures pour alléger les opérateurs de jointures. C'est une petite optimisation qui peut être très utile si l'on considère des requêtes très sélectives.
+
+
+    3. Query Plans:
+        a. Select:
+
+Pour le select nous avons un query plan très simple: on commence par rechercher l'itérateur Feuille (IndexScan ou FileScan) puis on applique les filtres (Filter) pour chacune des conditions sur la relation Ri en question. Ensuite nous appliquons les jointures (NestedLoopJoin). On ne fait pas de différence entre IndexNestedLoopJoin et NestedLoopJoin car cette différence sera faite en aval par le choix de l'itérateur. Les jointures sont faites selon la condition suivante: on joint Ri et Rj si j < i. Ainsi on évite les doublons dans les jointures.
+Une fois que l'on possède le dernier itérateur de jointure on applique la projection dessus afin d'afficher seulement les données recherchées.
+
+        b. Delete:
+
+Le query plan pour le delete est le suivant: on recherche l'itérateur feuille (IndexScan, FileScan), puis on applique les filtres et enfin on renvoit la racine.
+Ainsi dans la fonction Delete on détruit dans les fichiers et dans les indexes tous les tuples renvoyés.
+
+        c. Update:
+
+Le query plan de l'update est le même que pour le delete a ceci près que l'on interdit de prendre un indexscan sur l'attribut que l'on update. En effet, on souhaite conserver l'intégrité du scan.
+
+
+    4. Détermination IndexScan / FileScan:
+
+Pour permettre des itérations plus rapides, on donne la possibilité de choisir entre un index scan ou un file scan. Ce choix est fait simplement: on itère sur toutes les conditions, si on trouve un index recevable on l'utilise, si on n'a pas trouvé d'index alors on recherche un file scan. Enfin si on ne trouve ni filescan ni indexscan, on ouvre un filescan sans condition.
+
+Quand plusieurs choix sont possibles pour les indexes ou pour les fichiers, on réalise une petite optimisation à savoir que l'on préfèrera des comparaison sur des INT puis sur des FLOAT et enfin sur des STRING.
+
+
+    5. Problème rencontrés:
+
+Les principaux problèmes ont été liés à la création des plans d'exécutions: comment ordonnancer les jointures principalement.
+Autre problème, la gestion mémoires des tableaux d'attributs. On a choisi d'intégrer les attributs à l'itérateur. Il a donc fallut mettre en place des copies de tableau, ...
+
+    6. Bugs connus:
+
+Les bugs rencontrés ont été fixés. A priori aucun nouveau bug n'est actuellement connu.
+
+
