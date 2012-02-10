@@ -156,7 +156,6 @@ RC QL_Manager::SelectPlan(QL_Iterator *&racine, int nSelAttrs, const RelAttr sel
 	// Pour chaque relation,
 	//    1) on choisit un itérateur niveau feuille (indexScan ou fileScan) -> leaf
 	//    2) on applique les filtres -> leaf = new IT_Filter(leaf, ...)
-	// On stocke les leaf par indice de relation
 	//    3) on applique les jointures à toutes les relations suivantes -> racine = new IT_Join(leaf1, leaf2, ...)
 	// On applique la projection sur root
 	for (int i = 0; i < nRelations; i++) {
@@ -232,7 +231,7 @@ RC QL_Manager::SelectPlan(QL_Iterator *&racine, int nSelAttrs, const RelAttr sel
                 if( (strcmp(conditions[j].lhsAttr.relName, relations[i])==0  && !conditions[j].bRhsIsAttr) ||
                     (strcmp(conditions[j].lhsAttr.relName, relations[i])==0  && conditions[j].bRhsIsAttr && strcmp(conditions[j].rhsAttr.relName, relations[i])==0) ) {
 
-                feuille = new IT_Filter(racine, conditions[j]);
+                feuille = new IT_Filter(feuille, conditions[j]);
                 }
             }
         }

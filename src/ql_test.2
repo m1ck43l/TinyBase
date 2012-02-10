@@ -8,6 +8,9 @@ create table student(no i, name c20, dept c4, GPA f, comment c3);
 load student("../../data/student.data");
 !ls
 
+/* queryplans on; */
+queryplans on;
+
 print student;
 select * from student;
 select no, name from student where no > 5;
@@ -29,7 +32,7 @@ create index stars(stname);
 load stars("../../data/stars.data");
 
 select * from soaps, stars where soaps.soapid = stars.soapid;
-select * from soaps, stars where soaps.soapid = stars.soapid and stars.starid > 5;
+select * from soaps, stars where soaps.soapid = stars.soapid and stars.starid > 5 and soaps.network = "NBC";;
 
 delete from soaps;
 Print soaps;

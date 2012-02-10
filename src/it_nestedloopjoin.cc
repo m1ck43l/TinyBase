@@ -128,6 +128,9 @@ RC IT_NestedLoopJoin::Close() {
 	RC rc = LeftIterator->Close();
 	if(rc) return rc;
 
+	rc = RightIterator->Close();
+	// Pas de retour rc en cas de right deja fermé
+
 	bIsOpen = false;
 	return 0;
 }
