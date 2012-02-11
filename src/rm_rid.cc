@@ -41,8 +41,8 @@ bool RID::IsEqual(const RID &rid){
     PageNum page;
     SlotNum slot;
 
-    GetPageNum(page);
-    GetSlotNum(slot);
+    rid.GetPageNum(page);
+    rid.GetSlotNum(slot);
 
     if ((pageNum == page) && (slotNum == slot))
         return true;

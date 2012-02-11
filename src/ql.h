@@ -97,7 +97,8 @@ void QL_PrintError(RC rc);
 #define QL_ITNOTOPEN			(START_QL_WARN + 5)
 #define QL_EOF					(START_QL_WARN + 6)
 #define QL_ITALRDYOPEN			(START_QL_WARN + 7)
-#define QL_LASTWARN				QL_ITALRDYOPEN
+#define QL_FORBIDDENOP			(START_QL_WARN + 8)
+#define QL_LASTWARN				QL_FORBIDDENOP
 
 #define QL_LASTERROR			START_QL_ERR
 

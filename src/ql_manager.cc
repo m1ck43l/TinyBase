@@ -161,10 +161,10 @@ RC QL_Manager::SelectPlan(QL_Iterator *&racine, int nSelAttrs, const RelAttr sel
 	// On applique la projection sur root
 	for (int i = 0; i < nRelations; i++) {
         int idxCond = -1;
-        AttrType idxCondType;
+        AttrType idxCondType = INT;
 
         int fileCond = -1;
-        AttrType fileCondType;
+        AttrType fileCondType = INT;
 
         // On essaye de trouver un index parmis les conditions
         // On privilégie un index sur des INT puis FLOAT puis STRING
@@ -402,6 +402,10 @@ RC QL_Manager::Delete(const char *relName,
         cout << "   conditions[" << i << "]:" << conditions[i] << "\n";
 
     cout << "\n\n";
+
+    // Nous ne voulons pas autoriser la suppression de relcat et attrcat
+    if (strcmp(relName, "relcat") == 0 || strcmp(relName, "attrcat") == 0)
+    	return QL_FORBIDDENOP;
 
     RC rc;
     RM_FileHandle rmfh;
@@ -652,6 +656,9 @@ RC QL_Manager::Update(const char *relName,
 		rc = rmfh.UpdateRec(rec);
 		if(rc) return rc;
 
+		rc = rec.GetRid(rid);
+		if(rc) return rc;
+
 		// Finalement on réinsère dans l'index
 		if (attributes[iLeft].indexNo != -1) {
 			rc = indexes.InsertEntry(pData + attributes[iLeft].offset, rid);
@@ -767,10 +774,10 @@ RC QL_Manager::UpdatePlan(QL_Iterator*& racine, const char *relName, const char*
 	RID rid;
 
 	int idxCond = -1;
-	AttrType idxCondType;
+	AttrType idxCondType = INT;
 
 	int fileCond = -1;
-	AttrType fileCondType;
+	AttrType fileCondType = INT;
 
 	// On essaye de trouver un index parmis les conditions
 	// On privilégie un index sur des INT puis FLOAT puis STRING
@@ -866,7 +873,8 @@ static char *QL_WarnMsg[] = {
     (char*)"Wrong attribute type in where clause",
     (char*)"Iterator not open",
     (char*)"Iterator EOF",
-    (char*)"Iterator already open"
+    (char*)"Iterator already open",
+    (char*)"Forbidden operation"
 };
 
 static char *QL_ErrorMsg[] = {

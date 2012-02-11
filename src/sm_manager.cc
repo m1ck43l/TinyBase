@@ -263,7 +263,6 @@ RC SM_Manager::DropTable(const char *relName)
         }
 
         // Destruction du tuple
-        // TODO --> verifier que le scan n'est pas casser a la suite de la suppression !
         rc = rec.GetRid(rid);
         if(rc) return rc;
 
@@ -345,7 +344,11 @@ RC SM_Manager::CreateIndex(const char *relName,
         rc = rec.GetData(pData);
         if(rc) return rc;
 
+        rc = rec.GetRid(rid);
+        if(rc) return rc;
+
         rc = ixih.InsertEntry(pData + currentAttr.offset, rid);
+        if(rc) return rc;
     }
 
     if (rc != RM_EOF && rc != 0)
@@ -402,6 +405,10 @@ RC SM_Manager::DropIndex(const char *relName,
     rec.SetRID(rid);
     rc = attrcat_fh.UpdateRec(rec);
     if(rc) return rc;
+
+    // Force pages
+	relcat_fh.ForcePages();
+	attrcat_fh.ForcePages();
 
     cout << "DropIndex\n"
          << "   relName =" << relName << "\n"
