@@ -165,6 +165,10 @@ RC IX_Manager::CloseIndex(IX_IndexHandle &indexHandle) {
     rc = indexHandle.ForcePages();
     if (rc) return rc;
 
+    // Fermeture de l'index
+    rc = pf_manager.CloseFile(*(indexHandle.pf_filehandle));
+	if (rc) return rc;
+
     // le fichier est clos
     indexHandle.bFileOpen = false;
 
