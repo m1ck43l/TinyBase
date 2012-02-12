@@ -480,7 +480,7 @@ RC QL_Manager::Delete(const char *relName,
 		for(int i = 0; i < attrNb; i++) {
 			if (attributes[i].indexNo != -1) {
 				rc = indexes[i].DeleteEntry(pData + attributes[i].offset, rid);
-				//if(rc) return rc;
+				if(rc) return rc;
 			}
 		}
 

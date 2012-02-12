@@ -540,7 +540,7 @@ RC SM_Manager::Load(const char *relName,
             // make appropriate index entries for the tuple
             for (int i = 0; i < attrCount; i++) {
             	if (attributes[i].indexNo != -1) {
-					rc = ixih_array[i].InsertEntry(pData, rid);
+					rc = ixih_array[i].InsertEntry(pData + attributes[i].offset, rid);
 					if (rc) return rc;
             	}
             }
